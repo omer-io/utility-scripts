@@ -1,8 +1,19 @@
-# Solana Logs Uploader to Google Sheets  
+# Utility Scripts  
 
-This repository provides a way to parse log files and upload parsed data to a Google Spreadsheet.  
+This repository contains scripts for:  
+- **Logs Parser**: Parses solana log files and uploads data to Google Sheets.  
+- **Jito Reward Finder**: Finds Jito rewards for given slots.  
 
-## 📌 How It Works  
+---
+
+**Install Requirements**  
+  ```bash
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install -r requirements.txt
+  ```
+
+## 📌 Logs Parser  
 
 1. **Grant Access to the Service Account**  
    - Open your Google Sheet.  
@@ -20,16 +31,18 @@ This repository provides a way to parse log files and upload parsed data to a Go
      ```
    - Replace `SPREADSHEET_ID` in `upload_logs.py` on line 7 with your actual Spreadsheet ID.  
 
-3. **Install Requirements**  
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     pip install -r requirements.txt
-     ```
-
-4. **Upload Logs**  
+3. **Upload Logs**  
    - Run the script `logs_parser.sh` with:  
      ```bash
      ./logs_parser.sh <log_file_path> <tab_title>
      ```
    - This will parse the log file and upload the data to the specified tab in Google Sheets.  
+
+---
+
+## 📌 Jito Reward Finder     
+
+Run the script with one or more slot numbers:  
+```bash
+python3 get_jito_rewards.py <slot1> <slot2> ...
+```
