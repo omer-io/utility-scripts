@@ -1,6 +1,6 @@
 # Solana Logs Uploader to Google Sheets  
 
-This repository provides a simple way to parse log files and upload parsed data to a Google Spreadsheet.  
+This repository provides way to parse log files and upload parsed data to a Google Spreadsheet.  
 
 ## 📌 How It Works  
 
@@ -9,7 +9,7 @@ This repository provides a simple way to parse log files and upload parsed data 
    - Click on **Share** (top-right corner).  
    - Add this email as an **Editor**:  
      ```
-     upload-logs@upload-logs-451020.iam.gserviceaccount.com
+     upload-logs@upload-logs-451118.iam.gserviceaccount.com
      ```
    - Click **Send** to grant access.  
 
