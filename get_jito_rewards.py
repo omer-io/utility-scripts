@@ -132,12 +132,15 @@ def main():
         tx_not_found = 0
         non_vote_txns = get_non_vote_txns(slot)
         jito_txns, bundle_ids = asyncio.run(rate_limiter(non_vote_txns, max_requests_per_second))
+        num_of_signatures = sum(len(tx["transaction"]["signatures"]) for tx in jito_txns)
         bundle_ids = list(set(bundle_ids))
         print("txns requests completed: ", len(non_vote_txns), " | jito txns: ", len(jito_txns), " | bundles:", len(bundle_ids))
         jito_fee = 0
         for tx in jito_txns:
             jito_fee += tx.get("meta", {}).get("fee", 0)
 
+        jito_fee = jito_fee - (num_of_signatures * 2500)
+        print(f"number of jito txns signatures for slot {slot}: {num_of_signatures}")
         print(f"Jito fee for slot {slot}: {jito_fee}")
         total_jito_fee += jito_fee
         total_jito_txns += len(jito_txns)
