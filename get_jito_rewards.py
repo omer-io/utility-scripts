@@ -18,21 +18,26 @@ async def fetch_jito_tx(signature, session):
         async with session.get(url) as response:
             if response.status == 200:
                 data = await response.json()
-                return isinstance(data, list) and len(data) > 0 and "bundle_id" in data[0]
+                if isinstance(data, list) and len(data) > 0 and "bundle_id" in data[0]:
+                    return data[0]["bundle_id"]
+                else:
+                    return None
             elif response.status == 429:
-                print(f"HTTP ERROR (429) for signature {signature}")           
+                print(f"HTTP ERROR (429) for signature {signature}")  
+                return None         
             else:
                 if response.status != 404:
                     print(f"HTTP error {response.status} for signature {signature}")
-                return False
+                return None
     except Exception as e:
         print(f"Error fetching data for signature {signature}: {e}")
-        return False
+        return None
 
 # Asynchronous rate limiter
 async def rate_limiter(txns, max_requests_per_second):
     global requests_done
     results = []
+    bundle_ids = []
     num_of_requests = max_requests_per_second
 
     async def reset_requests():
@@ -52,9 +57,10 @@ async def rate_limiter(txns, max_requests_per_second):
             await asyncio.sleep(0.3)  # Wait until requests are available
         num_of_requests -= 1
         requests_done += 1
-        bundle_id_found = await fetch_jito_tx(tx["transaction"]["signatures"][0], session)
-        if bundle_id_found:
+        bundle_id = await fetch_jito_tx(tx["transaction"]["signatures"][0], session)
+        if bundle_id is not None:
             results.append(tx)
+            bundle_ids.append(bundle_id)
         else:
             tx_not_found += 1
 
@@ -64,7 +70,7 @@ async def rate_limiter(txns, max_requests_per_second):
         await asyncio.gather(*tasks)
         reset_task.cancel()
 
-    return results
+    return results, bundle_ids
 
 def jito_tx(sig):
     url = f"https://bundles.jito.wtf/api/v1/bundles/transaction/{sig}"
@@ -117,21 +123,27 @@ def main():
     max_requests_per_second = 20
     global requests_done, rate_limit_error, tx_not_found
     total_jito_fee = 0
+    total_jito_txns = 0
+    total_bundles = 0
+
     for slot in slots:
         requests_done = 0
         rate_limit_error = 0
         tx_not_found = 0
         non_vote_txns = get_non_vote_txns(slot)
-        jito_txns = asyncio.run(rate_limiter(non_vote_txns, max_requests_per_second))
-        print("txns requests completed: ", len(non_vote_txns), " | jito txns: ", len(jito_txns))
+        jito_txns, bundle_ids = asyncio.run(rate_limiter(non_vote_txns, max_requests_per_second))
+        bundle_ids = list(set(bundle_ids))
+        print("txns requests completed: ", len(non_vote_txns), " | jito txns: ", len(jito_txns), " | bundles:", len(bundle_ids))
         jito_fee = 0
         for tx in jito_txns:
             jito_fee += tx.get("meta", {}).get("fee", 0)
 
         print(f"Jito fee for slot {slot}: {jito_fee}")
         total_jito_fee += jito_fee
+        total_jito_txns += len(jito_txns)
+        total_bundles += len(bundle_ids)
 
-    print(f"Combined Jito Fee for slot(s) {slots} is {total_jito_fee}")
+    print(f"Slot(s) {slots} | Bundles {total_bundles} | Total Jito Txns {total_jito_txns} | Total Jito Rewards {total_jito_fee}")
 
 if __name__ == "__main__":
     main()
