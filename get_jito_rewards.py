@@ -1,3 +1,5 @@
+import csv
+import time
 import argparse
 import requests
 import pandas as pd
@@ -14,24 +16,30 @@ async def fetch_jito_tx(signature, session):
     global rate_limit_error
     url = f"https://bundles.jito.wtf/api/v1/bundles/transaction/{signature}"
 
-    try:
-        async with session.get(url) as response:
-            if response.status == 200:
-                data = await response.json()
-                if isinstance(data, list) and len(data) > 0 and "bundle_id" in data[0]:
-                    return data[0]["bundle_id"]
+    retries = 5
+    for attempt in range(retries):
+        try:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if isinstance(data, list) and len(data) > 0 and "bundle_id" in data[0]:
+                        return data[0]["bundle_id"]
+                    else:
+                        return None
+                elif response.status == 429 or response.status == 403:
+                    print(f"HTTP ERROR {response.status} for signature {signature}. Attempt {attempt + 1}/{retries}")
+                    if attempt < retries - 1:
+                        await asyncio.sleep(0.5)
+                    else:
+                        print(f"Max retries reached for {signature}")
+                        return None      
                 else:
+                    if response.status != 404:
+                        print(f"HTTP error {response.status} for signature {signature}")
                     return None
-            elif response.status == 429:
-                print(f"HTTP ERROR (429) for signature {signature}")  
-                return None         
-            else:
-                if response.status != 404:
-                    print(f"HTTP error {response.status} for signature {signature}")
-                return None
-    except Exception as e:
-        print(f"Error fetching data for signature {signature}: {e}")
-        return None
+        except Exception as e:
+            print(f"Error fetching data for signature {signature}: {e}")
+            return None
 
 # Asynchronous rate limiter
 async def rate_limiter(txns, max_requests_per_second):
@@ -84,27 +92,71 @@ def jito_tx(sig):
 
     return False 
 
-def get_non_vote_txns(slot):
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "getBlock",
-        "params": [slot, {"encoding": "jsonParsed", "maxSupportedTransactionVersion": 0}]
-    }
-    response = requests.post(rpc_url, json=payload)
-    block_data = response.json()
+def get_block_rewards(block_data, slot):
+    lamports = 0
+    if "result" in block_data and "rewards" in block_data["result"]:
+        rewards = block_data["result"]["rewards"]
+        # Filter rewards for type "Fee"
+        fee_rewards = [reward for reward in rewards if reward.get("rewardType") == "Fee"]
 
-    if "error" in block_data:
-        print(f"Error fetching block {slot}: {block_data['error']['message']}")
-        return None
+        if fee_rewards:
+            for reward in fee_rewards:
+                lamports = reward["lamports"]  # Extract lamports
+                sol_value = lamports / 1_000_000_000  # Convert to SOL
+                print(f"Slot: {slot} | Pubkey: {reward['pubkey']} | Lamports: {lamports} | SOL: {sol_value:.9f} | Type: {reward['rewardType']}")
+        else:
+            print("No 'Fee' rewards found in this block.")
+    else:
+        print("No rewards data found for this block.")
 
-    transactions = block_data.get("result", {}).get("transactions", [])
-    print(f"Txns in slot {slot}: {len(transactions)}")
+    return lamports
 
-    non_vote_txns = [tx for tx in transactions if not is_vote_tx(tx)]
-    print(f"Non-vote Txns in slot {slot}: {len(non_vote_txns)}")
+def get_vote_fee(transaction):
+    log_messages = transaction.get("meta", {}).get("logMessages", [])
+    vote_fee = 0
+    if "Program Vote111111111111111111111111111111111111111 success" in log_messages:
+        vote_fee = transaction.get("meta", {}).get("fee", 0)  
 
-    return non_vote_txns
+    return vote_fee
+
+def get_block_data(slot):
+    retries = 5
+    for attempt in range(retries):
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getBlock",
+                "params": [slot, {"encoding": "jsonParsed", "maxSupportedTransactionVersion": 0}]
+            }
+            response = requests.post(rpc_url, json=payload)
+            block_data = response.json()
+
+            if "error" in block_data:
+                print(f"Error fetching block {slot}: {block_data['error']['message']}")
+                return None, None, None, None, None
+
+            transactions = block_data.get("result", {}).get("transactions", [])
+            print(f"Txns in slot {slot}: {len(transactions)}")
+            total_txns = len(transactions)
+
+            non_vote_txns = [tx for tx in transactions if not is_vote_tx(tx)]
+            print(f"Non-vote Txns in slot {slot}: {len(non_vote_txns)}")
+
+            block_rewards = get_block_rewards(block_data, slot)
+            vote_rewards = sum(get_vote_fee(tx) for tx in transactions)
+            vote_rewards = vote_rewards/2
+            nonvote_rewards = block_rewards - vote_rewards
+
+            return total_txns, block_rewards, vote_rewards, nonvote_rewards, non_vote_txns
+        
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed in getting block data: {e}")
+            if attempt < retries - 1:
+                time.sleep(1) 
+            else:
+                print("Max retries reached in getting block data. Returning None.")
+                return None, None, None, None, None
 
 def is_vote_tx(transaction):
     log_messages = transaction.get("meta", {}).get("logMessages", [])
@@ -116,37 +168,72 @@ def is_vote_tx(transaction):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("slots", nargs="+", type=int, help="Enter one or more slot numbers")
+    parser.add_argument("first_slot", type=int, help="Enter first slot of your turn")
     
     args = parser.parse_args()
-    slots = args.slots
-    max_requests_per_second = 20
+    first_slot = args.first_slot
+
+    prev_turn_slots = [first_slot - i for i in range(4, 0, -1)]
+    our_turn_slots = [first_slot + i for i in range(4)]
+    next_turn_slots = [first_slot + i for i in range(4, 8)]
+    turns = [prev_turn_slots, our_turn_slots, next_turn_slots]
+    turn_labels = ["Previous Turn", "Our Turn", "Next Turn"]
+    print("Previous Turn Slots:", prev_turn_slots)
+    print("Our Turn Slots:", our_turn_slots)
+    print("Next Turn Slots:", next_turn_slots)
+
+    max_requests_per_second = 18
     global requests_done, rate_limit_error, tx_not_found
-    total_jito_fee = 0
-    total_jito_txns = 0
-    total_bundles = 0
 
-    for slot in slots:
-        requests_done = 0
-        rate_limit_error = 0
-        tx_not_found = 0
-        non_vote_txns = get_non_vote_txns(slot)
-        jito_txns, bundle_ids = asyncio.run(rate_limiter(non_vote_txns, max_requests_per_second))
-        num_of_signatures = sum(len(tx["transaction"]["signatures"]) for tx in jito_txns)
-        bundle_ids = list(set(bundle_ids))
-        print("txns requests completed: ", len(non_vote_txns), " | jito txns: ", len(jito_txns), " | bundles:", len(bundle_ids))
-        jito_fee = 0
-        for tx in jito_txns:
-            jito_fee += tx.get("meta", {}).get("fee", 0)
+    with open("jito_summary.csv", mode="w", newline="") as file:
+        csv_writer = csv.writer(file)
+        csv_writer.writerow(["Turn", "Slot(s)", "Bundles", "Jito Txns", "Jito Rewards", "Total Txns", "NonVote Txns", "Total Block Rewards", "NonVote Rewards", "Vote Rewards"])
 
-        jito_fee = jito_fee - (num_of_signatures * 2500)
-        print(f"number of jito txns signatures for slot {slot}: {num_of_signatures}")
-        print(f"Jito fee for slot {slot}: {jito_fee}")
-        total_jito_fee += jito_fee
-        total_jito_txns += len(jito_txns)
-        total_bundles += len(bundle_ids)
+        for i, each_turn in enumerate(turns):
+            print(f"\nExecuting: {turn_labels[i]} -> {each_turn}")
+            total_jito_fee = 0
+            total_jito_txns = 0
+            total_bundles = 0
+            total_block_rewards = 0
+            total_vote_rewards = 0
+            total_nonvote_rewards = 0
+            total_txns = 0
+            total_nonvote_txns = 0
 
-    print(f"Slot(s) {slots} | Bundles {total_bundles} | Total Jito Txns {total_jito_txns} | Total Jito Rewards {total_jito_fee}")
+            for slot in each_turn:
+                requests_done = 0
+                rate_limit_error = 0
+                tx_not_found = 0
+                slot_txns, block_rewards, vote_rewards, nonvote_rewards, non_vote_txns = get_block_data(slot)
+
+                if slot_txns and non_vote_txns:
+                    total_txns += slot_txns
+                    total_nonvote_txns += len(non_vote_txns)
+                    total_block_rewards += block_rewards
+                    total_vote_rewards += vote_rewards
+                    total_nonvote_rewards += nonvote_rewards
+
+                    jito_txns, bundle_ids = asyncio.run(rate_limiter(non_vote_txns, max_requests_per_second))
+                    num_of_signatures = sum(len(tx["transaction"]["signatures"]) for tx in jito_txns)
+                    bundle_ids = list(set(bundle_ids))
+                    print("txns requests completed: ", len(non_vote_txns), " | jito txns: ", len(jito_txns), " | bundles:", len(bundle_ids))
+                    jito_fee = 0
+                    for tx in jito_txns:
+                        jito_fee += tx.get("meta", {}).get("fee", 0)
+
+                    jito_fee = jito_fee - (num_of_signatures * 2500)
+                    print(f"number of jito txns signatures for slot {slot}: {num_of_signatures}")
+                    print(f"Jito fee for slot {slot}: {jito_fee}")
+                    total_jito_fee += jito_fee
+                    total_jito_txns += len(jito_txns)
+                    total_bundles += len(bundle_ids)
+
+                    csv_writer.writerow([turn_labels[i], slot, len(bundle_ids), len(jito_txns), jito_fee, slot_txns, len(non_vote_txns), block_rewards, nonvote_rewards, vote_rewards])
+                else:
+                    print(f"ERROR: NonVote txns not found for slot: {slot}, skipping...")
+
+            csv_writer.writerow([turn_labels[i], f"{each_turn[0]} - {each_turn[-1]}", total_bundles, total_jito_txns, total_jito_fee, total_txns, total_nonvote_txns, total_block_rewards, total_nonvote_rewards, total_vote_rewards])
+            print(f"\nTurn {each_turn} | Bundles {total_bundles} | Jito Txns {total_jito_txns} | Jito Rewards {total_jito_fee} | Total Txns {total_txns}| Total NonVote Txns {total_nonvote_txns} | Total Block Rewards {total_block_rewards} | Total NonVote Rewards {total_nonvote_rewards} | Total Vote Rewards {total_vote_rewards}")
 
 if __name__ == "__main__":
     main()
