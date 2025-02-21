@@ -4,7 +4,7 @@ import pandas as pd
 import argparse
 import string
 
-SPREADSHEET_ID = '1rlGSGMRh2aLGj4Eu0XTnAtoVlqhn8VA8kdq8iE1OnpI'
+SPREADSHEET_ID = '1oP0TuRCuIFb0OocZFzrkn142qXigoIdRqTW4aL1qd1Y'
 # Path to your service account key JSON file
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 
@@ -54,7 +54,7 @@ def process_csv(file_path):
     for section in sections:
         lines = section.strip().split("\n")
         name = [lines[0].strip()]  # First line is the section name
-        
+
         col_sums = [lines[1].split(",")]  # Second line contains column sums
         col_names = [lines[2].split(",")]  # Third line contains column names
 
