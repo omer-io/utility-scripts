@@ -65,7 +65,6 @@ if [ -n "$HEADERS" ]; then
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
-
 #### Extract banking_stage_scheduler_counts ####
 HEADERS_SCHEDULER=$(grep banking_stage_scheduler_counts "$LOG_FILE" | \
     awk -F "banking_stage_scheduler_counts" '{print $2}' | \
@@ -86,15 +85,13 @@ VALUES_SCHEDULER=$(paste -d',' <(
 SUMS_SCHEDULER=$(echo "$VALUES_SCHEDULER" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_SCHEDULER" ]; then
-HEADERS_SCHEDULER=",$HEADERS_SCHEDULER"
-echo "banking_stage_scheduler_counts" >> "$OUTPUT_FILE"
-echo "$SUMS_SCHEDULER" >> "$OUTPUT_FILE"
-echo "$HEADERS_SCHEDULER" >> "$OUTPUT_FILE"
-echo "$VALUES_SCHEDULER" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    HEADERS_SCHEDULER=",$HEADERS_SCHEDULER"
+    echo "banking_stage_scheduler_counts" >> "$OUTPUT_FILE"
+    echo "$SUMS_SCHEDULER" >> "$OUTPUT_FILE"
+    echo "$HEADERS_SCHEDULER" >> "$OUTPUT_FILE"
+    echo "$VALUES_SCHEDULER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
 
 #### Extract banking_stage_scheduler_slot_counts ####
 HEADERS_SCHEDULER_SLOT=$(grep banking_stage_scheduler_slot_counts "$LOG_FILE" | \
@@ -114,13 +111,12 @@ SLOT_VALUES_SCHEDULER=$(paste -d',' <(
 SLOT_SUMS_SCHEDULER=$(echo "$SLOT_VALUES_SCHEDULER" | awk -F',' '{for (i=2; i<NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_SCHEDULER_SLOT" ]; then
-HEADERS_SCHEDULER_SLOT=",$HEADERS_SCHEDULER_SLOT"
-echo "banking_stage_scheduler_slot_counts" >> "$OUTPUT_FILE"
-echo "$SLOT_SUMS_SCHEDULER" >> "$OUTPUT_FILE"
-echo "$HEADERS_SCHEDULER_SLOT" >> "$OUTPUT_FILE"
-echo "$SLOT_VALUES_SCHEDULER" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    HEADERS_SCHEDULER_SLOT=",$HEADERS_SCHEDULER_SLOT"
+    echo "banking_stage_scheduler_slot_counts" >> "$OUTPUT_FILE"
+    echo "$SLOT_SUMS_SCHEDULER" >> "$OUTPUT_FILE"
+    echo "$HEADERS_SCHEDULER_SLOT" >> "$OUTPUT_FILE"
+    echo "$SLOT_VALUES_SCHEDULER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
 HEADERS_WORKER=$(grep banking_stage_worker_counts "$LOG_FILE" | \
@@ -141,15 +137,12 @@ VALUES_WORKER=$(paste -d',' <(
 SUMS_WORKER=$(echo "$VALUES_WORKER" | awk -F',' '{for (i=3; i<NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_WORKER" ]; then
-echo "banking_stage_worker_counts" >> "$OUTPUT_FILE"
-echo "$SUMS_WORKER" >> "$OUTPUT_FILE"
-echo "$HEADERS_WORKER" >> "$OUTPUT_FILE"
-echo "$VALUES_WORKER" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    echo "banking_stage_worker_counts" >> "$OUTPUT_FILE"
+    echo "$SUMS_WORKER" >> "$OUTPUT_FILE"
+    echo "$HEADERS_WORKER" >> "$OUTPUT_FILE"
+    echo "$VALUES_WORKER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
-
 
 HEADERS_WORKER_ERROR=$(grep banking_stage_worker_error_metrics "$LOG_FILE" | \
     awk -F "banking_stage_worker_error_metrics" '{print $2}' | \
@@ -169,15 +162,12 @@ VALUES_WORKER_ERROR=$(paste -d',' <(
 SUMS_WORKER_ERROR=$(echo "$VALUES_WORKER_ERROR" | awk -F',' '{for (i=3; i<NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_WORKER_ERROR" ]; then
-echo "banking_stage_worker_error_metrics" >> "$OUTPUT_FILE"
-echo "$SUMS_WORKER_ERROR" >> "$OUTPUT_FILE"
-echo "$HEADERS_WORKER_ERROR" >> "$OUTPUT_FILE"
-echo "$VALUES_WORKER_ERROR" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    echo "banking_stage_worker_error_metrics" >> "$OUTPUT_FILE"
+    echo "$SUMS_WORKER_ERROR" >> "$OUTPUT_FILE"
+    echo "$HEADERS_WORKER_ERROR" >> "$OUTPUT_FILE"
+    echo "$VALUES_WORKER_ERROR" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
-
 
 HEADERS_LEADER_SLOT_TRANSACTION_ERROR=$(grep banking_stage-leader_slot_transaction_errors "$LOG_FILE" | \
     awk -F "banking_stage-leader_slot_transaction_errors" '{print $2}' | \
@@ -197,12 +187,11 @@ LEADER_SLOT_TRANSACTION_ERROR=$(paste -d',' <(
 SUMS_LEADER_SLOT_TRANSACTION_ERROR=$(echo "$LEADER_SLOT_TRANSACTION_ERROR" | awk -F',' '{for (i=4; i<=NF; i++) sum[i]+=$i} END {printf ",,,"; for (i=4; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_LEADER_SLOT_TRANSACTION_ERROR" ]; then
-echo "banking_stage-leader_slot_transaction_errors" >> "$OUTPUT_FILE"
-echo "$SUMS_LEADER_SLOT_TRANSACTION_ERROR" >> "$OUTPUT_FILE"
-echo "$HEADERS_LEADER_SLOT_TRANSACTION_ERROR" >> "$OUTPUT_FILE"
-echo "$LEADER_SLOT_TRANSACTION_ERROR" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    echo "banking_stage-leader_slot_transaction_errors" >> "$OUTPUT_FILE"
+    echo "$SUMS_LEADER_SLOT_TRANSACTION_ERROR" >> "$OUTPUT_FILE"
+    echo "$HEADERS_LEADER_SLOT_TRANSACTION_ERROR" >> "$OUTPUT_FILE"
+    echo "$LEADER_SLOT_TRANSACTION_ERROR" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
 
@@ -249,12 +238,11 @@ LEADER_DETECTION=$(paste -d',' <(
 SUMS_LEADER_DETECTION=$(echo "$LEADER_DETECTION" | awk -F',' '{for (i=3; i<=NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_LEADER_DETECTION" ]; then
-echo "banking_stage_scheduler_leader_detection" >> "$OUTPUT_FILE"
-echo "$SUMS_LEADER_DETECTION" >> "$OUTPUT_FILE"
-echo "$HEADERS_LEADER_DETECTION" >> "$OUTPUT_FILE"
-echo "$LEADER_DETECTION" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    echo "banking_stage_scheduler_leader_detection" >> "$OUTPUT_FILE"
+    echo "$SUMS_LEADER_DETECTION" >> "$OUTPUT_FILE"
+    echo "$HEADERS_LEADER_DETECTION" >> "$OUTPUT_FILE"
+    echo "$LEADER_DETECTION" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
 
@@ -277,15 +265,12 @@ LEADER_SLOT_PACKET_COUNT=$(paste -d',' <(
 SUMS_LEADER_SLOT_PACKET_COUNT=$(echo "$LEADER_SLOT_PACKET_COUNT" | awk -F',' '{for (i=4; i<=NF; i++) sum[i]+=$i} END {printf ",,,"; for (i=4; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_LEADER_SLOT_PACKET_COUNT" ]; then
-echo "banking_stage-leader_slot_packet_counts" >> "$OUTPUT_FILE"
-echo "$SUMS_LEADER_SLOT_PACKET_COUNT" >> "$OUTPUT_FILE"
-echo "$HEADERS_LEADER_SLOT_PACKET_COUNT" >> "$OUTPUT_FILE"
-echo "$LEADER_SLOT_PACKET_COUNT" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    echo "banking_stage-leader_slot_packet_counts" >> "$OUTPUT_FILE"
+    echo "$SUMS_LEADER_SLOT_PACKET_COUNT" >> "$OUTPUT_FILE"
+    echo "$HEADERS_LEADER_SLOT_PACKET_COUNT" >> "$OUTPUT_FILE"
+    echo "$LEADER_SLOT_PACKET_COUNT" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
-
 
 HEADERS_SCHEDULER_RECEPTION_TIMING=$(grep banking_stage_scheduler_reception_slot_timing "$LOG_FILE" | \
     awk -F "banking_stage_scheduler_reception_slot_timing" '{print $2}' | \
@@ -304,15 +289,13 @@ SCHEDULER_RECEPTION_TIMING=$(paste -d',' <(
 SUMS_SCHEDULER_RECEPTION_TIMING=$(echo "$SCHEDULER_RECEPTION_TIMING" | awk -F',' '{for (i=2; i<NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_SCHEDULER_RECEPTION_TIMING" ]; then
-HEADERS_SCHEDULER_RECEPTION_TIMING=",$HEADERS_SCHEDULER_RECEPTION_TIMING"
-echo "banking_stage_scheduler_reception_slot_timing" >> "$OUTPUT_FILE"
-echo "$SUMS_SCHEDULER_RECEPTION_TIMING" >> "$OUTPUT_FILE" 
-echo "$HEADERS_SCHEDULER_RECEPTION_TIMING" >> "$OUTPUT_FILE"
-echo "$SCHEDULER_RECEPTION_TIMING" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    HEADERS_SCHEDULER_RECEPTION_TIMING=",$HEADERS_SCHEDULER_RECEPTION_TIMING"
+    echo "banking_stage_scheduler_reception_slot_timing" >> "$OUTPUT_FILE"
+    echo "$SUMS_SCHEDULER_RECEPTION_TIMING" >> "$OUTPUT_FILE" 
+    echo "$HEADERS_SCHEDULER_RECEPTION_TIMING" >> "$OUTPUT_FILE"
+    echo "$SCHEDULER_RECEPTION_TIMING" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
 
 HEADERS_SCHEDULER_TIMING=$(grep banking_stage_scheduler_timing "$LOG_FILE" | \
     awk -F "banking_stage_scheduler_timing" '{print $2}' | \
@@ -331,15 +314,13 @@ SCHEDULER_TIMING=$(paste -d',' <(
 SUMS_SCHEDULER_TIMING=$(echo "$SCHEDULER_TIMING" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_SCHEDULER_TIMING" ]; then
-HEADERS_SCHEDULER_TIMING=",$HEADERS_SCHEDULER_TIMING"
-echo "banking_stage_scheduler_timing" >> "$OUTPUT_FILE"
-echo "$SUMS_SCHEDULER_TIMING" >> "$OUTPUT_FILE"
-echo "$HEADERS_SCHEDULER_TIMING" >> "$OUTPUT_FILE"
-echo "$SCHEDULER_TIMING" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    HEADERS_SCHEDULER_TIMING=",$HEADERS_SCHEDULER_TIMING"
+    echo "banking_stage_scheduler_timing" >> "$OUTPUT_FILE"
+    echo "$SUMS_SCHEDULER_TIMING" >> "$OUTPUT_FILE"
+    echo "$HEADERS_SCHEDULER_TIMING" >> "$OUTPUT_FILE"
+    echo "$SCHEDULER_TIMING" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
 
 HEADERS_WORKER_TIMING=$(grep banking_stage_worker_timing "$LOG_FILE" | \
     awk -F "banking_stage_worker_timing" '{print $2}' | \
@@ -358,15 +339,12 @@ WORKER_TIMING=$(paste -d',' <(
 SUMS_WORKER_TIMING=$(echo "$WORKER_TIMING" | awk -F',' '{for (i=3; i<NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_WORKER_TIMING" ]; then
-echo "banking_stage_worker_timing" >> "$OUTPUT_FILE"
-echo "$SUMS_WORKER_TIMING" >> "$OUTPUT_FILE" 
-echo "$HEADERS_WORKER_TIMING" >> "$OUTPUT_FILE"
-echo "$WORKER_TIMING" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    echo "banking_stage_worker_timing" >> "$OUTPUT_FILE"
+    echo "$SUMS_WORKER_TIMING" >> "$OUTPUT_FILE" 
+    echo "$HEADERS_WORKER_TIMING" >> "$OUTPUT_FILE"
+    echo "$WORKER_TIMING" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
-
 
 HEADERS_POH_SERVICE=$(grep poh-service "$LOG_FILE" | \
     awk -F "poh-service" '{print $2}' | \
@@ -385,15 +363,13 @@ VALUES_POH_SERVICE=$(paste -d',' <(
 SUMS_POH_SERVICE=$(echo "$VALUES_POH_SERVICE" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_POH_SERVICE" ]; then
-HEADERS_POH_SERVICE=",$HEADERS_POH_SERVICE"
-echo "poh-service" >> "$OUTPUT_FILE"
-echo "$SUMS_POH_SERVICE" >> "$OUTPUT_FILE"
-echo "$HEADERS_POH_SERVICE" >> "$OUTPUT_FILE"
-echo "$VALUES_POH_SERVICE" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    HEADERS_POH_SERVICE=",$HEADERS_POH_SERVICE"
+    echo "poh-service" >> "$OUTPUT_FILE"
+    echo "$SUMS_POH_SERVICE" >> "$OUTPUT_FILE"
+    echo "$HEADERS_POH_SERVICE" >> "$OUTPUT_FILE"
+    echo "$VALUES_POH_SERVICE" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
 
 HEADERS_POH_RECORDER=$(grep tick_lock_contention "$LOG_FILE" | \
     awk -F "poh_recorder" '{print $2}' | \
@@ -412,15 +388,13 @@ VALUES_POH_RECORDER=$(paste -d',' <(
 SUMS_POH_RECORDER=$(echo "$VALUES_POH_RECORDER" | awk -F',' '{for (i=3; i<=NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$$HEADERS_POH_RECORDER" ]; then
-HEADERS_POH_RECORDER=",$HEADERS_POH_RECORDER"
-echo "poh-recorder" >> "$OUTPUT_FILE"
-echo "$SUMS_POH_RECORDER" >> "$OUTPUT_FILE"
-echo "$HEADERS_POH_RECORDER" >> "$OUTPUT_FILE"
-echo "$VALUES_POH_RECORDER" >> "$OUTPUT_FILE"
-
-echo -e "\n" >> "$OUTPUT_FILE"
+    HEADERS_POH_RECORDER=",$HEADERS_POH_RECORDER"
+    echo "poh-recorder" >> "$OUTPUT_FILE"
+    echo "$SUMS_POH_RECORDER" >> "$OUTPUT_FILE"
+    echo "$HEADERS_POH_RECORDER" >> "$OUTPUT_FILE"
+    echo "$VALUES_POH_RECORDER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
 fi
-
 
 # HEADERS_REPLAY_SLOTS_STATS=$(grep replay-slot-stats "$LOG_FILE" | \
 #     awk -F "replay-slot-stats" '{print $2}' | \
