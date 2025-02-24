@@ -55,7 +55,7 @@ async def rate_limiter(txns, max_requests_per_second):
         while True:
             await asyncio.sleep(2.2)  # Reset every second
             num_of_requests = max_requests_per_second
-            print("txns requests completed: ", requests_done, " | jito txns: ", requests_done - tx_not_found)
+            print("txns requests completed: ", requests_done, " | tx not found: ", tx_not_found)
 
     async def worker(tx, session):
         global requests_done
@@ -79,18 +79,6 @@ async def rate_limiter(txns, max_requests_per_second):
         reset_task.cancel()
 
     return results, bundle_ids
-
-def jito_tx(sig):
-    url = f"https://bundles.jito.wtf/api/v1/bundles/transaction/{sig}"
-
-    response = requests.get(url)
-    print(response.json()) 
-
-    if response.status_code == 200:
-        data = response.json()
-        return isinstance(data, list) and len(data) > 0 and "bundle_id" in data[0]
-
-    return False 
 
 def get_block_rewards(block_data, slot):
     lamports = 0
@@ -182,13 +170,15 @@ def main():
     print("Our Turn Slots:", our_turn_slots)
     print("Next Turn Slots:", next_turn_slots)
 
-    max_requests_per_second = 18
+    max_requests_per_second = 10
     global requests_done, rate_limit_error, tx_not_found
 
+    results = []
     with open("jito_summary.csv", mode="w", newline="") as file:
         csv_writer = csv.writer(file)
-        csv_writer.writerow(["Turn", "Slot(s)", "Bundles", "Jito Txns", "Jito Rewards", "Total Txns", "NonVote Txns", "Total Block Rewards", "NonVote Rewards", "Vote Rewards"])
-
+        csv_writer.writerow(["Prev Slots", "Bundles", "Jito Txns", "Jito Rewards", "Block Rewards (NonVote)", "Total Txns (NonVote)", "Our Slots", "Bundles", "Jito Txns", "Jito Rewards", "Block Rewards (NonVote)", "Total Txns (NonVote)", "Next Slots", "Bundles", "Jito Txns", "Jito Rewards", "Block Rewards (NonVote)", "Total Txns (NonVote)"])
+        # csv_writer.writerow(["Turn", "Slot(s)", "Bundles", "Jito Txns", "Jito Rewards", "Total Txns", "NonVote Txns", "Total Block Rewards", "NonVote Rewards", "Vote Rewards"])
+        file.flush()
         for i, each_turn in enumerate(turns):
             print(f"\nExecuting: {turn_labels[i]} -> {each_turn}")
             total_jito_fee = 0
@@ -228,12 +218,20 @@ def main():
                     total_jito_txns += len(jito_txns)
                     total_bundles += len(bundle_ids)
 
-                    csv_writer.writerow([turn_labels[i], slot, len(bundle_ids), len(jito_txns), jito_fee, slot_txns, len(non_vote_txns), block_rewards, nonvote_rewards, vote_rewards])
+                    # csv_writer.writerow([turn_labels[i], slot, len(bundle_ids), len(jito_txns), jito_fee, slot_txns, len(non_vote_txns), block_rewards, nonvote_rewards, vote_rewards])
+                    print(f"{turn_labels[i]} | Slot {slot} | Bundles {len(bundle_ids)} | Jito Txns {len(jito_txns)} | Jito Rewards {jito_fee} | Block Rewards (NonVote) {int(nonvote_rewards)} | Total Txns (NonVote) {len(non_vote_txns)}")
+                    # file.flush()
                 else:
                     print(f"ERROR: NonVote txns not found for slot: {slot}, skipping...")
 
-            csv_writer.writerow([turn_labels[i], f"{each_turn[0]} - {each_turn[-1]}", total_bundles, total_jito_txns, total_jito_fee, total_txns, total_nonvote_txns, total_block_rewards, total_nonvote_rewards, total_vote_rewards])
-            print(f"\nTurn {each_turn} | Bundles {total_bundles} | Jito Txns {total_jito_txns} | Jito Rewards {total_jito_fee} | Total Txns {total_txns}| Total NonVote Txns {total_nonvote_txns} | Total Block Rewards {total_block_rewards} | Total NonVote Rewards {total_nonvote_rewards} | Total Vote Rewards {total_vote_rewards}")
+            # csv_writer.writerow([turn_labels[i], f"{each_turn[0]} - {each_turn[-1]}", total_bundles, total_jito_txns, total_jito_fee, total_txns, total_nonvote_txns, total_block_rewards, total_nonvote_rewards, total_vote_rewards])
+            results.extend([f"{each_turn[0]} - {each_turn[-1]}", total_bundles, total_jito_txns, total_jito_fee, int(total_nonvote_rewards), total_nonvote_txns])
+            # csv_writer.writerow([f"{each_turn[0]} - {each_turn[-1]}", total_bundles, total_jito_txns, total_jito_fee, int(total_nonvote_rewards), total_nonvote_txns])
+            # file.flush()
+            print(f"\nTurn {each_turn} | Bundles {total_bundles} | Jito Txns {total_jito_txns} | Jito Rewards {total_jito_fee} | Total Txns {total_txns}| Total NonVote Txns {total_nonvote_txns} | Total Block Rewards {total_block_rewards} | Total NonVote Rewards {int(total_nonvote_rewards)} | Total Vote Rewards {int(total_vote_rewards)}")
+
+        csv_writer.writerow(results)
+        file.flush()
 
 if __name__ == "__main__":
     main()
