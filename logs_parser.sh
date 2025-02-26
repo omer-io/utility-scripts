@@ -225,7 +225,7 @@ HEADERS_LEADER_DETECTION=$(grep banking_stage_scheduler_leader_detection "$LOG_F
     awk -F "banking_stage_scheduler_leader_detection" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
     sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
-HEADERS_LEADER_DETECTION=",$HEADERS_LEADER_DETECTION"
+
 LEADER_DETECTION=$(paste -d',' <(
     grep banking_stage_scheduler_leader_detection "$LOG_FILE" | awk '{print $1}' | \
     awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
@@ -238,6 +238,7 @@ LEADER_DETECTION=$(paste -d',' <(
 SUMS_LEADER_DETECTION=$(echo "$LEADER_DETECTION" | awk -F',' '{for (i=3; i<=NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_LEADER_DETECTION" ]; then
+    HEADERS_LEADER_DETECTION=",$HEADERS_LEADER_DETECTION"
     echo "banking_stage_scheduler_leader_detection" >> "$OUTPUT_FILE"
     echo "$SUMS_LEADER_DETECTION" >> "$OUTPUT_FILE"
     echo "$HEADERS_LEADER_DETECTION" >> "$OUTPUT_FILE"
