@@ -55,7 +55,7 @@ def process_csv(file_path):
         lines = section.strip().split("\n")
         name = [lines[0].strip()]  # First line is the section name
 
-        col_sums = [[float(value) if value.replace('.', '', 1).isdigit() else value for value in lines[1].split(",")]] # Second line contains column sums
+        col_sums = [lines[1].split(",")]  # Second line contains column sums
         col_names = [lines[2].split(",")]  # Third line contains column names
 
         # Extract actual data
