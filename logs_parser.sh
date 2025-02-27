@@ -213,7 +213,7 @@ RECEPTION_LEADER_DETECTION=$(paste -d',' <(
 SUMS_RECEPTION_LEADER_DETECTION=$(echo "$RECEPTION_LEADER_DETECTION" | awk -F',' '{for (i=3; i<=NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
 if [ -n "$HEADERS_RECEPTION_LEADER_DETECTION" ]; then
-    HEADERS_RECEPTION_LEADER_DETECTION=",$RECEPTION_LEADER_DETECTION"
+    HEADERS_RECEPTION_LEADER_DETECTION=",$HEADERS_RECEPTION_LEADER_DETECTION"
     echo "banking_stage_scheduler_reception_leader_detection" >> "$OUTPUT_FILE"
     echo "$SUMS_RECEPTION_LEADER_DETECTION" >> "$OUTPUT_FILE"
     echo "$HEADERS_RECEPTION_LEADER_DETECTION" >> "$OUTPUT_FILE"
