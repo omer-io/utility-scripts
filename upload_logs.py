@@ -4,7 +4,7 @@ import pandas as pd
 import argparse
 import string
 
-SPREADSHEET_ID = '1oP0TuRCuIFb0OocZFzrkn142qXigoIdRqTW4aL1qd1Y'
+SPREADSHEET_ID = '1po5bTCmhkQeg3e7LrS1evfrNVTMZ8pHYOrQfL3tlq4k'
 # Path to your service account key JSON file
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 
@@ -101,7 +101,8 @@ if __name__ == '__main__':
         add_tab_to_google_sheet(SPREADSHEET_ID, tab_title)
         print(f"Added new tab '{tab_title}' to Google Sheet with ID: {SPREADSHEET_ID}")
     except Exception as e:
-        print(f"Tab '{tab_title}' might already exist. Error: {e}")
+        print(f"Tab '{tab_title}' might already exist, Exiting. Error: {e}")
+        exit()
 
     sections_data = process_csv(csv_file)
     current_col = 0

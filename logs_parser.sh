@@ -9,6 +9,11 @@ LOG_FILE="$1"
 TAB_TITLE="$2"
 OUTPUT_FILE="solana_logs.csv"
 
+if [ ! -f "$LOG_FILE" ]; then
+    echo "Error: Log file '$LOG_FILE' does not exist."
+    exit 2
+fi
+
 # Extract headers
 HEADERS=$(grep banking_stage_scheduler_reception_counts "$LOG_FILE" | \
     awk -F "banking_stage_scheduler_reception_counts" '{print $2}' | \
@@ -394,6 +399,81 @@ if [ -n "$$HEADERS_POH_RECORDER" ]; then
     echo "$SUMS_POH_RECORDER" >> "$OUTPUT_FILE"
     echo "$HEADERS_POH_RECORDER" >> "$OUTPUT_FILE"
     echo "$VALUES_POH_RECORDER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+# HEADERS_SIGVERIFY=$(grep tpu-verifier "$LOG_FILE" | \
+#     awk -F "tpu-verifier" '{print $2}' | \
+#     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+#     sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+# VALUES_SIGVERIFY=$(paste -d',' <(
+#     grep tpu-verifier "$LOG_FILE" | awk '{print $1}' | \
+#     awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+# ) <(
+#     grep tpu-verifier "$LOG_FILE" | \
+#     awk '{print $33,$36}' | sed 's/i//g' | sed 's/ /,/g' | awk -F'[=,]' '{print $2,$4}' OFS=',' | \
+#     sed 's/,$//g'
+# ))
+
+# SUMS_SIGVERIFY=$(echo "$VALUES_SIGVERIFY" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+# if [ -n "$$HEADERS_SIGVERIFY" ]; then
+#     HEADERS_SIGVERIFY=",$HEADERS_SIGVERIFY"
+#     echo "tpu-verifier" >> "$OUTPUT_FILE"
+#     echo "$SUMS_SIGVERIFY" >> "$OUTPUT_FILE"
+#     echo "$HEADERS_SIGVERIFY" >> "$OUTPUT_FILE"
+#     echo "$VALUES_SIGVERIFY" >> "$OUTPUT_FILE"
+#     echo -e "\n" >> "$OUTPUT_FILE"
+# fi
+
+HEADERS_FULL_SIGVERIFY=$(grep tpu-verifier "$LOG_FILE" | \
+    awk -F "tpu-verifier" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+VALUES_FULL_SIGVERIFY=$(paste -d',' <(
+    grep tpu-verifier "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep tpu-verifier "$LOG_FILE" | \
+    awk -F "tpu-verifier" '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+SUMS_FULL_SIGVERIFY=$(echo "$VALUES_FULL_SIGVERIFY" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$$HEADERS_FULL_SIGVERIFY" ]; then
+    HEADERS_FULL_SIGVERIFY=",$HEADERS_FULL_SIGVERIFY"
+    echo "tpu-verifier" >> "$OUTPUT_FILE"
+    echo "$SUMS_FULL_SIGVERIFY" >> "$OUTPUT_FILE"
+    echo "$HEADERS_FULL_SIGVERIFY" >> "$OUTPUT_FILE"
+    echo "$VALUES_FULL_SIGVERIFY" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+HEADERS_QUIC=$(grep quic_streamer_tpu "$LOG_FILE" | grep -v quic_streamer_tpu_forwards | grep -v "quic server on" | \
+    awk -F "quic_streamer_tpu" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+VALUES_QUIC=$(paste -d',' <(
+    grep quic_streamer_tpu "$LOG_FILE" | grep -v quic_streamer_tpu_forwards | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep quic_streamer_tpu "$LOG_FILE" | grep -v quic_streamer_tpu_forwards | \
+    awk -F "quic_streamer_tpu" '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+SUMS_QUIC=$(echo "$VALUES_QUIC" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$HEADERS_QUIC" ]; then
+    HEADERS_QUIC=",$HEADERS_QUIC"
+    echo "quic_streamer_tpu" >> "$OUTPUT_FILE"
+    echo "$SUMS_QUIC" >> "$OUTPUT_FILE"
+    echo "$HEADERS_QUIC" >> "$OUTPUT_FILE"
+    echo "$VALUES_QUIC" >> "$OUTPUT_FILE"
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
