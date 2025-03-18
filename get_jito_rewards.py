@@ -102,7 +102,7 @@ def get_block_rewards(block_data, slot):
 def get_vote_fee(transaction):
     log_messages = transaction.get("meta", {}).get("logMessages", [])
     vote_fee = 0
-    if "Program Vote111111111111111111111111111111111111111 success" in log_messages:
+    if "Program Vote111111111111111111111111111111111111111 invoke [1]" in log_messages:
         vote_fee = transaction.get("meta", {}).get("fee", 0)  
 
     return vote_fee
@@ -149,7 +149,7 @@ def get_block_data(slot):
 def is_vote_tx(transaction):
     log_messages = transaction.get("meta", {}).get("logMessages", [])
     vote_tx = False
-    if "Program Vote111111111111111111111111111111111111111 success" in log_messages:
+    if "Program Vote111111111111111111111111111111111111111 invoke [1]" in log_messages:
         vote_tx = True
     
     return vote_tx  
