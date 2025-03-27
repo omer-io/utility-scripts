@@ -251,8 +251,6 @@ if [ -n "$HEADERS_LEADER_DETECTION" ]; then
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
-
-
 HEADERS_LEADER_SLOT_PACKET_COUNT=$(grep banking_stage-leader_slot_packet_counts "$LOG_FILE" | \
     awk -F "banking_stage-leader_slot_packet_counts" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
@@ -443,7 +441,7 @@ VALUES_FULL_SIGVERIFY=$(paste -d',' <(
 ))
 SUMS_FULL_SIGVERIFY=$(echo "$VALUES_FULL_SIGVERIFY" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
-if [ -n "$$HEADERS_FULL_SIGVERIFY" ]; then
+if [ -n "$HEADERS_FULL_SIGVERIFY" ]; then
     HEADERS_FULL_SIGVERIFY=",$HEADERS_FULL_SIGVERIFY"
     echo "tpu-verifier" >> "$OUTPUT_FILE"
     echo "$SUMS_FULL_SIGVERIFY" >> "$OUTPUT_FILE"

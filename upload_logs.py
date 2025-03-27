@@ -96,6 +96,8 @@ if __name__ == '__main__':
     csv_file = args.csv_file
     tab_title = args.tab_title
 
+    sections_data = process_csv(csv_file)
+    
     # Add a new tab to the existing Google Sheet
     try:
         add_tab_to_google_sheet(SPREADSHEET_ID, tab_title)
@@ -104,7 +106,6 @@ if __name__ == '__main__':
         print(f"Tab '{tab_title}' might already exist, Exiting. Error: {e}")
         exit()
 
-    sections_data = process_csv(csv_file)
     current_col = 0
     row_tracker = {}
     for section_name, data in sections_data.items():
