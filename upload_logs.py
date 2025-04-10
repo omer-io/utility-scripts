@@ -4,7 +4,7 @@ import pandas as pd
 import argparse
 import string
 
-SPREADSHEET_ID = '1po5bTCmhkQeg3e7LrS1evfrNVTMZ8pHYOrQfL3tlq4k'
+SPREADSHEET_ID = '19f2zr9TvlWP7xUr55YcetDfho6g0BB7a0Vsv2RPG-9M'
 # Path to your service account key JSON file
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 
@@ -115,7 +115,10 @@ if __name__ == '__main__':
             start_col = 0  # Column A
             start_row = row_tracker.get("banking_stage_scheduler_reception_counts", 1)
         elif section_name == "banking_stage_scheduler_slot_counts":
-            start_col = 15  # Column P
+            if "banking_stage_scheduler_reception_slot_counts" not in sections_data and "banking_stage_scheduler_reception_counts" not in sections_data:
+                start_col = 0
+            else:
+                start_col = 15  # Column P
             start_row = row_tracker.get("banking_stage_scheduler_counts", 1)
         else:
             start_col = current_col

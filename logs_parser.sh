@@ -9,6 +9,8 @@ LOG_FILE="$1"
 TAB_TITLE="$2"
 OUTPUT_FILE="solana_logs.csv"
 
+> "$OUTPUT_FILE"
+
 if [ ! -f "$LOG_FILE" ]; then
     echo "Error: Log file '$LOG_FILE' does not exist."
     exit 2
@@ -36,7 +38,7 @@ SUMS=$(echo "$VALUES" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {print
 
 if [ -n "$HEADERS" ]; then
     HEADERS=",$HEADERS"
-    echo "banking_stage_scheduler_reception_counts" > "$OUTPUT_FILE"
+    echo "banking_stage_scheduler_reception_counts" >> "$OUTPUT_FILE"
     echo "$SUMS" >> "$OUTPUT_FILE"
     echo "$HEADERS" >> "$OUTPUT_FILE"
     echo "$VALUES" >> "$OUTPUT_FILE"
