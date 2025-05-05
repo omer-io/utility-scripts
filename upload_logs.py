@@ -1,10 +1,10 @@
+import json
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import argparse
 import string
 
-SPREADSHEET_ID = '19f2zr9TvlWP7xUr55YcetDfho6g0BB7a0Vsv2RPG-9M'
 # Path to your service account key JSON file
 SERVICE_ACCOUNT_FILE = 'credentials.json'
 
@@ -26,7 +26,7 @@ def get_excel_column_letter(col_index):
     return ''.join(reversed(result))
 
 # Function to add a new tab (sheet) to an existing Google Sheet
-def add_tab_to_google_sheet(SPREADSHEET_ID, tab_title):
+def add_tab_to_google_sheet(spreadsheet_id, tab_title):
     body = {
         "requests": [
             {
@@ -39,7 +39,7 @@ def add_tab_to_google_sheet(SPREADSHEET_ID, tab_title):
         ]
     }
     response = service.spreadsheets().batchUpdate(
-        spreadsheetId=SPREADSHEET_ID,
+        spreadsheetId=spreadsheet_id,
         body=body
     ).execute()
     return response['replies'][0]['addSheet']['properties']['sheetId']
@@ -68,7 +68,7 @@ def process_csv(file_path):
     return formatted_data
     
 # Function to upload data to a specific tab in a Google Sheet
-def upload_csv_to_tab(SPREADSHEET_ID, tab_title, section_name, data, start_col, start_row):
+def upload_csv_to_tab(spreadsheet_id, tab_title, section_name, data, start_col, start_row):
     # Prepare the body for the request
     col_letter = get_excel_column_letter(start_col)  # Convert to Excel column letter
     body = {
@@ -78,12 +78,12 @@ def upload_csv_to_tab(SPREADSHEET_ID, tab_title, section_name, data, start_col, 
     # Upload data to the specified tab
     try:    
         service.spreadsheets().values().append(
-            spreadsheetId=SPREADSHEET_ID,
+            spreadsheetId=spreadsheet_id,
             range=f'{tab_title}!{col_letter}{start_row}', 
             valueInputOption='RAW',  
             body=body
         ).execute()
-        print(f"Uploaded {section_name} to tab '{tab_title}' in Google Sheet: https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}")
+        print(f"Uploaded {section_name} to tab '{tab_title}' in Google Sheet: https://docs.google.com/spreadsheets/d/{spreadsheet_id}")
     except Exception as e:
         print (f"error occurred uploading: {e}")
 
@@ -96,12 +96,16 @@ if __name__ == '__main__':
     csv_file = args.csv_file
     tab_title = args.tab_title
 
+    with open("config.json") as f:
+        config = json.load(f)
+        
+    spreadsheet_id = config['spreadsheet_id']
     sections_data = process_csv(csv_file)
     
     # Add a new tab to the existing Google Sheet
     try:
-        add_tab_to_google_sheet(SPREADSHEET_ID, tab_title)
-        print(f"Added new tab '{tab_title}' to Google Sheet with ID: {SPREADSHEET_ID}")
+        add_tab_to_google_sheet(spreadsheet_id, tab_title)
+        print(f"Added new tab '{tab_title}' to Google Sheet with ID: {spreadsheet_id}")
     except Exception as e:
         print(f"Tab '{tab_title}' might already exist, Exiting. Error: {e}")
         exit()
@@ -123,7 +127,7 @@ if __name__ == '__main__':
         else:
             start_col = current_col
             start_row = 1
-        upload_csv_to_tab(SPREADSHEET_ID, tab_title, section_name, data, start_col, start_row)
+        upload_csv_to_tab(spreadsheet_id, tab_title, section_name, data, start_col, start_row)
         row_tracker[section_name] = start_row + num_rows
         if section_name not in ("banking_stage_scheduler_reception_slot_counts", "banking_stage_scheduler_slot_counts"):
             current_col += num_columns + 2

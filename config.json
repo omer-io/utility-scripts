@@ -1,0 +1,18 @@
+{
+  "test_repo_path": "/home/ubuntu/omer/rakurai_jito_private/",
+  "test_name": "sched_1_0",
+  "bucket": "mainnet-traces",
+  "prefix": "mainnet_snapshots/",
+  "download_path": "/mnt/ramdisk",
+  "spreadsheet_id": "1nq0gk2r7v3x4a5z6b7c8d9e0f1g2h3i4j5k6l7m8n9o",
+  "directories": [
+    {
+      "name": "snapshot-337206608-337206628",
+      "first_simulated_slot": 337206628
+    },
+    {
+      "name": "snapshot-337101596-337101616",
+      "first_simulated_slot": 337101616
+    }
+  ]
+}
