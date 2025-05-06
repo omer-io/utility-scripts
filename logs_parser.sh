@@ -8,8 +8,10 @@ fi
 LOG_FILE="$1"
 TAB_TITLE="$2"
 OUTPUT_FILE="solana_logs.csv"
+SIM_OUTPUT_FILE="simulation_result.csv"
 
 > "$OUTPUT_FILE"
+> "$SIM_OUTPUT_FILE"
 
 if [ ! -f "$LOG_FILE" ]; then
     echo "Error: Log file '$LOG_FILE' does not exist."

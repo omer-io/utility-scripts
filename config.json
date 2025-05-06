@@ -4,7 +4,7 @@
   "bucket": "mainnet-traces",
   "prefix": "mainnet_snapshots/",
   "download_path": "/mnt/ramdisk",
-  "spreadsheet_id": "1nq0gk2r7v3x4a5z6b7c8d9e0f1g2h3i4j5k6l7m8n9o",
+  "spreadsheet_id": "1AR-NUVWK4Pf9SUrpXZAimaqNjwmhg6MKHZNgfe-YxJQ",
   "directories": [
     {
       "name": "snapshot-337206608-337206628",
