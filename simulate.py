@@ -17,9 +17,15 @@ S3_CLIENT_CONFIG = Config(
 def extract_metrics_from_log(log_file_path):
     try:
         # Extract block compute units → select last 4
-        cu_cmd = f"grep 'bank cost' {log_file_path} | awk -F '[()]' '{{split($2, nums, \", \"); print nums[1]}}'"
+        cu_cmd = (
+            f"grep 'simulated bank slot+delta' {log_file_path} | "
+            "grep '(frozen)' | "
+            "awk -F 'costs: | fees:' '{print $2}' | "
+            "tail -n 4 | "
+            "awk -F '[(),]' '{gsub(/ /, \"\", $2); print $2}'"
+        )
         cu_output = subprocess.check_output(cu_cmd, shell=True, text=True).strip().split("\n")
-        block_cu = cu_output[-4:]
+        block_cu = [int(val) for val in cu_output if val]
 
         # Extract block rewards → select last 4
         reward_cmd = f"grep 'bank frozen' {log_file_path} | awk '{{print $8}}' | sed 's/,//g'"
