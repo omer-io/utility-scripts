@@ -1,13 +1,14 @@
-import boto3
-from botocore.config import Config
-import json
 import os
-import subprocess
-import logging
+import json
 import time
-from pathlib import Path
+import boto3
 import shutil
 import gspread
+import logging
+import argparse
+import subprocess
+from pathlib import Path
+from botocore.config import Config
 from oauth2client.service_account import ServiceAccountCredentials
 
 S3_CLIENT_CONFIG = Config(
@@ -16,6 +17,7 @@ S3_CLIENT_CONFIG = Config(
 
 def extract_metrics_from_log(log_file_path):
     try:
+        logging.debug(f"📄 Extracting metrics from log file: {log_file_path}")
         # Extract block compute units → select last 4
         cu_cmd = (
             f"grep 'simulated bank slot+delta' {log_file_path} | "
@@ -26,11 +28,13 @@ def extract_metrics_from_log(log_file_path):
         )
         cu_output = subprocess.check_output(cu_cmd, shell=True, text=True).strip().split("\n")
         block_cu = [int(val) for val in cu_output if val]
+        logging.info(f"📊 Extracted block compute units: {block_cu}")
 
         # Extract block rewards → select last 4
         reward_cmd = f"grep 'bank frozen' {log_file_path} | awk '{{print $8}}' | sed 's/,//g'"
         reward_output = subprocess.check_output(reward_cmd, shell=True, text=True).strip().split("\n")
         block_rewards = reward_output[-4:]
+        logging.info(f"📊 Extracted block rewards: {block_rewards}")
 
         return list(map(int, block_cu)), list(map(int, block_rewards))
 
@@ -113,6 +117,7 @@ def download_snapshot(s3, bucket, full_prefix, local_base_dir):
             s3.download_file(bucket, s3_key, local_path)
 
 def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id):
+    logging.debug(f"🔍 Simulating snapshot: {name} at {snapshot_dir} for first slot {first_slot} on repo {repo_path}")
     os.makedirs(log_dir, exist_ok=True)
     log_filename = f"{first_slot}_{test_name}.log" if test_name else f"{first_slot}.log"
     log_file_path = os.path.join(log_dir, log_filename)
@@ -149,19 +154,19 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
                 if "Sleeping a bit before signaling exit" in line:
                     logging.info(f"🟡 Detected shutdown log in {name}")
                     logging.info(f"🔴 Terminating {name} due to exit signal...")
-                    time.sleep(2)
+                    time.sleep(10)
                     process.terminate()
                     process.wait()
                     break
 
             exit_code = process.wait()
-            if exit_code == 0 or exit_code == -15:
+            if exit_code == 0 or exit_code == -15 or exit_code == 101:
                 logging.info(f"✅ Simulation completed for {name}")
                 block_cu, block_rewards = extract_metrics_from_log(log_file_path)
+                logging.debug(f"📊 Block CU: {block_cu}, Block Rewards: {block_rewards}")
                 upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, log_file_path)
             else:
                 logging.error(f"❌ Simulation failed for {name} with exit code {exit_code}")
-
 
         except Exception as e:
             logging.error(f"❌ Error while running simulation for {name}: {e}")
@@ -172,7 +177,7 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
     try:
         snapshot_parent_dir = Path(snapshot_dir).parent
         snapshot_dirs = [d for d in snapshot_parent_dir.iterdir() if d.is_dir()]
-        if len(snapshot_dirs) > 4:
+        if len(snapshot_dirs) > 5:
             logging.info(f"🧹 Removing entire snapshot directory for {name} since there are more than 4 snapshot dirs")
             shutil.rmtree(snapshot_dir)
         else:
@@ -183,8 +188,13 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
         logging.error(f"⚠️ Cleanup failed for {name}: {e}")
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
-    
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
+
+    parser = argparse.ArgumentParser(description="Run snapshot simulations")
+    parser.add_argument('--name', help='Name of the snapshot directory to simulate')
+    parser.add_argument('--slot', type=int, help='First simulated slot for the snapshot')
+    args = parser.parse_args()
+
     with open("config.json") as f:
         config = json.load(f)
 
@@ -198,11 +208,21 @@ def main():
     sheet_id = config['spreadsheet_id']
     log_dir = os.path.join(repo_path, 'simulation_logs')
 
-    keep_dirs = [entry["name"] for entry in config["directories"]]
-    clean_download_dir(download_path, keep_dirs)
+    # Decide input mode: CLI args or config
+    if args.name and args.slot:
+        entries = [{"name": args.name.rstrip('/'), "first_simulated_slot": args.slot}]
+        logging.info(f"📦 Running single snapshot from CLI args: snapshot dir={args.name} first slot={args.slot}")
+    else:
+        entries = [
+            {"name": entry["name"].rstrip('/'), "first_simulated_slot": entry["first_simulated_slot"]}
+            for entry in config["directories"]
+        ]
+        logging.info(f"📦 Running batch simulation for {len(entries)} directories from config.json")
+        # keep_dirs = [entry["name"].rstrip('/') for entry in config["directories"]]
+        # clean_download_dir(download_path, keep_dirs)
     
-    for entry in config['directories']:
-        name = entry['name']
+    for entry in entries:
+        name = entry['name'].rstrip('/')
         first_slot = entry['first_simulated_slot']
         full_prefix = prefix + name + "/"
         local_dir = os.path.join(download_path, name)
