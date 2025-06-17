@@ -36,13 +36,22 @@ def extract_metrics_from_log(log_file_path):
         block_rewards = reward_output[-4:]
         logging.info(f"📊 Extracted block rewards: {block_rewards}")
 
-        return list(map(int, block_cu)), list(map(int, block_rewards))
+        # Extract Total Jito tips
+        tips_cmd = (
+            f"grep 'Total Jito tip account balance before:' {log_file_path} | "
+            "awk -F 'Total tips: | lamports' '{print $2}' | tail -n 1"
+        )
+        tips_output = subprocess.check_output(tips_cmd, shell=True, text=True).strip()
+        total_tips = int(tips_output) if tips_output else 0
+        logging.info(f"💰 Extracted Total Jito tips: {total_tips}")
+
+        return list(map(int, block_cu)), list(map(int, block_rewards)), total_tips
 
     except subprocess.CalledProcessError as e:
         logging.error(f"❌ Failed to extract metrics from log: {e}")
         return [], []
 
-def upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, log_file_path):
+def upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, total_tips, log_file_path):
     scope = ['https://www.googleapis.com/auth/spreadsheets']
     creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
     gc = gspread.authorize(creds)
@@ -62,20 +71,71 @@ def upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, lo
 
         header = ["TestName", "FirstSlot"]
         header += ["--"]
-        header += [f"BlockCU{i+1}" for i in range(len(block_cu))]
-        header += ["SumCU", "AvgCU"]
+        header += [f"CU-{i+1}" for i in range(len(block_cu))]
+        header += ["AvgCU"]
         header += ["--"]
-        header += [f"BlockReward{i+1}" for i in range(len(block_rewards))]
-        header += ["SumReward", "AvgReward"]
+        header += [f"Reward-{i+1}" for i in range(len(block_rewards))]
+        header += ["SumReward"]
+        header += ["Tips"]
         sheet.append_row(header, value_input_option='USER_ENTERED')
+
+        bold_format_request = {
+            "requests": [
+                {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": sheet._properties['sheetId'],
+                            "startRowIndex": 0,
+                            "endRowIndex": 1
+                        },
+                        "cell": {
+                            "userEnteredFormat": {
+                                "textFormat": {
+                                    "bold": True
+                                }
+                            }
+                        },
+                        "fields": "userEnteredFormat.textFormat.bold"
+                    }
+                }
+            ]
+        }
+        sheet.spreadsheet.batch_update(bold_format_request)
+
+        format_as_num_start = header.index("FirstSlot")
+        format_as_num_end = format_as_num_start + 14
+        format_request = {
+            "requests": [
+                {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": sheet._properties['sheetId'],
+                            "startRowIndex": 1,  # skip header row
+                            "startColumnIndex": format_as_num_start,
+                            "endColumnIndex": format_as_num_end
+                        },
+                        "cell": {
+                            "userEnteredFormat": {
+                                "numberFormat": {
+                                    "type": "NUMBER",
+                                    "pattern": "#,##0"
+                                }
+                            }
+                        },
+                        "fields": "userEnteredFormat.numberFormat"
+                    }
+                }
+            ]
+        }
+        sheet.spreadsheet.batch_update(format_request)
 
     cu_sum = sum(block_cu)
     cu_avg = round(cu_sum / len(block_cu), 2)
 
     reward_sum = sum(block_rewards)
-    reward_avg = round(reward_sum / len(block_rewards), 2)
+    # reward_avg = round(reward_sum / len(block_rewards), 2)
 
-    row = [test_name, first_slot] + ["--"] + block_cu + [cu_sum, cu_avg] + ["--"] + block_rewards + [reward_sum, reward_avg]
+    row = [test_name, first_slot] + ["--"] + block_cu + [cu_avg] + ["--"] + block_rewards + [reward_sum] + [total_tips]
     sheet.append_row(row, value_input_option='USER_ENTERED')
 
     logging.info(f"📤 Uploaded results for slot {first_slot}, test name {test_name} to Google Sheet: {sheet_id}, tab name: {first_slot}")
@@ -162,9 +222,9 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
             exit_code = process.wait()
             if exit_code == 0 or exit_code == -15 or exit_code == 101:
                 logging.info(f"✅ Simulation completed for {name}")
-                block_cu, block_rewards = extract_metrics_from_log(log_file_path)
-                logging.debug(f"📊 Block CU: {block_cu}, Block Rewards: {block_rewards}")
-                upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, log_file_path)
+                block_cu, block_rewards, total_tips = extract_metrics_from_log(log_file_path)
+                logging.debug(f"📊 Block CU: {block_cu}, Block Rewards: {block_rewards}, Total Tips: {total_tips}")
+                upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, total_tips, log_file_path)
             else:
                 logging.error(f"❌ Simulation failed for {name} with exit code {exit_code}")
 
@@ -191,8 +251,9 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
     parser = argparse.ArgumentParser(description="Run snapshot simulations")
-    parser.add_argument('--name', help='Name of the snapshot directory to simulate')
+    parser.add_argument('--snapshot_dir', help='Name of the snapshot directory to simulate')
     parser.add_argument('--slot', type=int, help='First simulated slot for the snapshot')
+    parser.add_argument('--test_name', help='Override test name')
     args = parser.parse_args()
 
     with open("config.json") as f:
@@ -204,14 +265,14 @@ def main():
     prefix = config['prefix']
     download_path = config['download_path']
     repo_path = config['test_repo_path']
-    test_name = config.get('test_name', '')
+    test_name = args.test_name if args.test_name else config.get('test_name', '')
     sheet_id = config['spreadsheet_id']
     log_dir = os.path.join(repo_path, 'simulation_logs')
 
     # Decide input mode: CLI args or config
-    if args.name and args.slot:
-        entries = [{"name": args.name.rstrip('/'), "first_simulated_slot": args.slot}]
-        logging.info(f"📦 Running single snapshot from CLI args: snapshot dir={args.name} first slot={args.slot}")
+    if args.snapshot_dir and args.slot:
+        entries = [{"name": args.snapshot_dir.rstrip('/'), "first_simulated_slot": args.slot}]
+        logging.info(f"📦 Running single snapshot from CLI args: snapshot dir={args.snapshot_dir} first slot={args.slot}")
     else:
         entries = [
             {"name": entry["name"].rstrip('/'), "first_simulated_slot": entry["first_simulated_slot"]}
