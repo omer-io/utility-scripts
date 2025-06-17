@@ -177,13 +177,13 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
     try:
         snapshot_parent_dir = Path(snapshot_dir).parent
         snapshot_dirs = [d for d in snapshot_parent_dir.iterdir() if d.is_dir()]
-        if len(snapshot_dirs) > 5:
-            logging.info(f"🧹 Removing entire snapshot directory for {name} since there are more than 4 snapshot dirs")
-            shutil.rmtree(snapshot_dir)
-        else:
-            cleanup_cmd = ["rm", "-rf", "accounts", "ledger_tool", "snapshot", "banking_retrace"]
-            subprocess.run(cleanup_cmd, cwd=snapshot_dir)
-            logging.info(f"🧽 Cleaned up inner dirs of snapshot {name}")
+        # if len(snapshot_dirs) > 5:
+        #     logging.info(f"🧹 Removing entire snapshot directory for {name} since there are more than 4 snapshot dirs")
+        #     shutil.rmtree(snapshot_dir)
+        # else:
+        cleanup_cmd = ["rm", "-rf", "accounts", "ledger_tool", "snapshot", "banking_retrace"]
+        subprocess.run(cleanup_cmd, cwd=snapshot_dir)
+        logging.info(f"🧽 Cleaned up inner dirs of snapshot {name}")
     except Exception as e:
         logging.error(f"⚠️ Cleanup failed for {name}: {e}")
 
