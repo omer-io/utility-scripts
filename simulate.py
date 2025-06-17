@@ -188,7 +188,7 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
         logging.error(f"⚠️ Cleanup failed for {name}: {e}")
 
 def main():
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
     parser = argparse.ArgumentParser(description="Run snapshot simulations")
     parser.add_argument('--name', help='Name of the snapshot directory to simulate')
