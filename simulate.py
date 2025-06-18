@@ -29,17 +29,21 @@ def extract_metrics_from_log(log_file_path):
         cu_output = subprocess.check_output(cu_cmd, shell=True, text=True).strip().split("\n")
         block_cu = [int(val) for val in cu_output if val]
         logging.info(f"📊 Extracted block compute units: {block_cu}")
+        if len(block_cu) != 4:
+            raise ValueError(f"Expected 4 compute unit entries, got {len(block_cu)}: {block_cu}")
 
         # Extract block rewards → select last 4
         reward_cmd = f"grep 'bank frozen' {log_file_path} | awk '{{print $8}}' | sed 's/,//g'"
         reward_output = subprocess.check_output(reward_cmd, shell=True, text=True).strip().split("\n")
         block_rewards = reward_output[-4:]
         logging.info(f"📊 Extracted block rewards: {block_rewards}")
-
+        if len(block_rewards) != 4:
+            raise ValueError(f"Expected 4 block reward entries, got {len(block_rewards)}: {block_rewards}")
+        
         # Extract Total Jito tips
         tips_cmd = (
             f"grep 'Total Jito tip account balance before:' {log_file_path} | "
-            "awk -F 'Total tips: | lamports' '{print $2}' | tail -n 1"
+            "sed -n 's/.*Total tips: \\([0-9]\\+\\) lamports.*/\\1/p' | tail -n 1"
         )
         tips_output = subprocess.check_output(tips_cmd, shell=True, text=True).strip()
         total_tips = int(tips_output) if tips_output else 0
@@ -47,9 +51,9 @@ def extract_metrics_from_log(log_file_path):
 
         return list(map(int, block_cu)), list(map(int, block_rewards)), total_tips
 
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, ValueError) as e:
         logging.error(f"❌ Failed to extract metrics from log: {e}")
-        return [], []
+        return [], [], 0
 
 def upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, total_tips, log_file_path):
     scope = ['https://www.googleapis.com/auth/spreadsheets']
@@ -79,7 +83,9 @@ def upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, to
         header += ["Tips"]
         sheet.append_row(header, value_input_option='USER_ENTERED')
 
-        bold_format_request = {
+        format_as_num_start = header.index("FirstSlot")
+        format_as_num_end = format_as_num_start + 14
+        format_requests = {
             "requests": [
                 {
                     "repeatCell": {
@@ -97,15 +103,7 @@ def upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, to
                         },
                         "fields": "userEnteredFormat.textFormat.bold"
                     }
-                }
-            ]
-        }
-        sheet.spreadsheet.batch_update(bold_format_request)
-
-        format_as_num_start = header.index("FirstSlot")
-        format_as_num_end = format_as_num_start + 14
-        format_request = {
-            "requests": [
+                },
                 {
                     "repeatCell": {
                         "range": {
@@ -124,10 +122,38 @@ def upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, to
                         },
                         "fields": "userEnteredFormat.numberFormat"
                     }
+                },
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": sheet._properties['sheetId'],
+                            "gridProperties": {
+                                "frozenRowCount": 1,
+                                "frozenColumnCount": 2
+                            }
+                        },
+                        "fields": "gridProperties.frozenRowCount,gridProperties.frozenColumnCount"
+                    }
+                },
+                {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": sheet._properties['sheetId'],
+                            "startRowIndex": 0,
+                            "startColumnIndex": 0,
+                            "endColumnIndex": 20
+                        },
+                        "cell": {
+                            "userEnteredFormat": {
+                                "horizontalAlignment": "CENTER"
+                            }
+                        },
+                        "fields": "userEnteredFormat.horizontalAlignment"
+                    }
                 }
             ]
         }
-        sheet.spreadsheet.batch_update(format_request)
+        sheet.spreadsheet.batch_update(format_requests)
 
     cu_sum = sum(block_cu)
     cu_avg = round(cu_sum / len(block_cu), 2)
@@ -177,7 +203,6 @@ def download_snapshot(s3, bucket, full_prefix, local_base_dir):
             s3.download_file(bucket, s3_key, local_path)
 
 def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id):
-    logging.debug(f"🔍 Simulating snapshot: {name} at {snapshot_dir} for first slot {first_slot} on repo {repo_path}")
     os.makedirs(log_dir, exist_ok=True)
     log_filename = f"{first_slot}_{test_name}.log" if test_name else f"{first_slot}.log"
     log_file_path = os.path.join(log_dir, log_filename)
@@ -223,8 +248,11 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
             if exit_code == 0 or exit_code == -15 or exit_code == 101:
                 logging.info(f"✅ Simulation completed for {name}")
                 block_cu, block_rewards, total_tips = extract_metrics_from_log(log_file_path)
-                logging.debug(f"📊 Block CU: {block_cu}, Block Rewards: {block_rewards}, Total Tips: {total_tips}")
-                upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, total_tips, log_file_path)
+                logging.info(f"📊 Block CU: {block_cu}, Block Rewards: {block_rewards}, Total Tips: {total_tips}")
+                if block_cu and block_rewards:
+                    upload_to_sheet(sheet_id, first_slot, test_name, block_cu, block_rewards, total_tips, log_file_path)
+                else:
+                    logging.error(f"❌ No valid metrics extracted from log for {name}. Check the log file: {log_file_path}")
             else:
                 logging.error(f"❌ Simulation failed for {name} with exit code {exit_code}")
 
