@@ -1,19 +1,14 @@
 import os
 import json
 import time
-import boto3
 import shutil
 import gspread
 import logging
 import argparse
 import subprocess
 from pathlib import Path
-from botocore.config import Config
+from google.cloud import storage
 from oauth2client.service_account import ServiceAccountCredentials
-
-S3_CLIENT_CONFIG = Config(
-    retries={"max_attempts": 10, "mode": "standard"} 
-)
 
 def extract_metrics_from_log(log_file_path):
     try:
@@ -188,19 +183,23 @@ def clean_download_dir(download_path, keep_dirs):
         except Exception as e:
             logging.warning(f"⚠️ Failed to remove {item_path}: {e}")
 
-def download_snapshot(s3, bucket, full_prefix, local_base_dir):
-    paginator = s3.get_paginator('list_objects_v2')
-    for page in paginator.paginate(Bucket=bucket, Prefix=full_prefix):
-        if 'Contents' not in page:
+def download_snapshot(bucket, full_prefix, local_base_dir):
+    client = storage.Client()  # Uses default credentials
+    bucket = client.bucket(bucket)
+    blobs = client.list_blobs(bucket, prefix=full_prefix)
+
+    for blob in blobs:
+        gcs_path = blob.name
+        relative_path = gcs_path[len(full_prefix):].lstrip("/")  # remove prefix and any leading slash
+
+        if not relative_path or gcs_path.endswith("/"):
+            # Skip the prefix directory itself or "folders" (GCS is flat, but folder-like objects end with '/')
             continue
-        for obj in page['Contents']:
-            s3_key = obj['Key']
-            relative_path = s3_key[len(full_prefix):]
-            if not relative_path:  # skip directory itself
-                continue
-            local_path = os.path.join(local_base_dir, relative_path)
-            Path(local_path).parent.mkdir(parents=True, exist_ok=True)
-            s3.download_file(bucket, s3_key, local_path)
+
+        local_path = os.path.join(local_base_dir, relative_path)
+        Path(local_path).parent.mkdir(parents=True, exist_ok=True)
+
+        blob.download_to_filename(local_path)
 
 def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id):
     os.makedirs(log_dir, exist_ok=True)
@@ -287,8 +286,6 @@ def main():
     with open("config.json") as f:
         config = json.load(f)
 
-    session = boto3.Session()
-    s3 = session.client('s3', config=S3_CLIENT_CONFIG)
     bucket = config['bucket']
     prefix = config['prefix']
     download_path = config['download_path']
@@ -319,8 +316,8 @@ def main():
         if os.path.exists(local_dir):
             logging.info(f"⏭️ Skipping downloading {name}: already exists at {local_dir}")
         else:
-            logging.info(f"⬇️ Downloading snapshot {name} from S3...")
-            download_snapshot(s3, bucket, full_prefix, local_dir)
+            logging.info(f"⬇️ Downloading snapshot {name} from GCP...")
+            download_snapshot(bucket, full_prefix, local_dir)
 
         simulate_snapshot(local_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id)
 

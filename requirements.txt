@@ -10,3 +10,5 @@ boto3
 botocore
 gspread
 oauth2client
+google-cloud-storage
+google-cloud-compute
