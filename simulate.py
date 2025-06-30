@@ -184,22 +184,38 @@ def clean_download_dir(download_path, keep_dirs):
             logging.warning(f"⚠️ Failed to remove {item_path}: {e}")
 
 def download_snapshot(bucket, full_prefix, local_base_dir):
-    client = storage.Client()  # Uses default credentials
-    bucket = client.bucket(bucket)
-    blobs = client.list_blobs(bucket, prefix=full_prefix)
+    gcs_uri = f"gs://{bucket}/{full_prefix.rstrip('/')}/"
+    cmd = [
+        "gcloud", "storage", "cp",
+        gcs_uri,
+        local_base_dir,
+        "--recursive"
+    ]
+    logging.info(f"🚀 Running command: {' '.join(cmd)}")
 
-    for blob in blobs:
-        gcs_path = blob.name
-        relative_path = gcs_path[len(full_prefix):].lstrip("/")  # remove prefix and any leading slash
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        logging.info("✅ Download completed successfully.")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"❌ Download failed with error:\n{e.stderr}")
 
-        if not relative_path or gcs_path.endswith("/"):
-            # Skip the prefix directory itself or "folders" (GCS is flat, but folder-like objects end with '/')
-            continue
+# def download_snapshot(bucket, full_prefix, local_base_dir):
+#     client = storage.Client()  # Uses default credentials
+#     bucket = client.bucket(bucket)
+#     blobs = client.list_blobs(bucket, prefix=full_prefix)
 
-        local_path = os.path.join(local_base_dir, relative_path)
-        Path(local_path).parent.mkdir(parents=True, exist_ok=True)
+#     for blob in blobs:
+#         gcs_path = blob.name
+#         relative_path = gcs_path[len(full_prefix):].lstrip("/")  # remove prefix and any leading slash
 
-        blob.download_to_filename(local_path)
+#         if not relative_path or gcs_path.endswith("/"):
+#             # Skip the prefix directory itself or "folders" (GCS is flat, but folder-like objects end with '/')
+#             continue
+
+#         local_path = os.path.join(local_base_dir, relative_path)
+#         Path(local_path).parent.mkdir(parents=True, exist_ok=True)
+
+#         blob.download_to_filename(local_path)
 
 def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id):
     os.makedirs(log_dir, exist_ok=True)
@@ -275,7 +291,7 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
         logging.error(f"⚠️ Cleanup failed for {name}: {e}")
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s")
 
     parser = argparse.ArgumentParser(description="Run snapshot simulations")
     parser.add_argument('--snapshot_dir', help='Name of the snapshot directory to simulate')
@@ -286,9 +302,9 @@ def main():
     with open("config.json") as f:
         config = json.load(f)
 
-    bucket = config['bucket']
-    prefix = config['prefix']
-    download_path = config['download_path']
+    bucket = config['bucket'].rstrip('/')
+    prefix = config['prefix'].rstrip('/') + "/"
+    download_path = config['download_path'].rstrip('/')
     repo_path = config['test_repo_path']
     test_name = args.test_name if args.test_name else config.get('test_name', '')
     sheet_id = config['spreadsheet_id']
@@ -317,7 +333,7 @@ def main():
             logging.info(f"⏭️ Skipping downloading {name}: already exists at {local_dir}")
         else:
             logging.info(f"⬇️ Downloading snapshot {name} from GCP...")
-            download_snapshot(bucket, full_prefix, local_dir)
+            download_snapshot(bucket, full_prefix, download_path)
 
         simulate_snapshot(local_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id)
 
