@@ -178,6 +178,94 @@ if [ -n "$HEADERS_WORKER_ERROR" ]; then
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
+### check cu progress
+HEADERS_CHECK_CU_PROGRESS=$(grep check_cu_progress "$LOG_FILE" | \
+    awk -F "check_cu_progress" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+# Extract values and replace spaces with commas
+VALUES_CHECK_CU_PROGRESS=$(paste -d',' <(
+    grep check_cu_progress "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep check_cu_progress "$LOG_FILE" | \
+    awk -F check_cu_progress '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+# Compute column sums, replace spaces with commas, and remove trailing comma
+SUMS_CHECK_CU_PROGRESS=$(echo "$VALUES_CHECK_CU_PROGRESS" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$HEADERS_CHECK_CU_PROGRESS" ]; then
+    HEADERS_CHECK_CU_PROGRESS=",$HEADERS_CHECK_CU_PROGRESS"
+    echo "check_cu_progress" >> "$OUTPUT_FILE"
+    echo "$SUMS_CHECK_CU_PROGRESS" >> "$OUTPUT_FILE"
+    echo "$HEADERS_CHECK_CU_PROGRESS" >> "$OUTPUT_FILE"
+    echo "$VALUES_CHECK_CU_PROGRESS" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+### bundle_stage-stats
+HEADERS_BUNDLE_STAGE_STATS=$(grep bundle_stage-stats "$LOG_FILE" | \
+    awk -F "bundle_stage-stats" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+# Extract values and replace spaces with commas
+VALUES_BUNDLE_STAGE_STATS=$(paste -d',' <(
+    grep bundle_stage-stats "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep bundle_stage-stats "$LOG_FILE" | \
+    awk -F bundle_stage-stats '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+# Compute column sums, replace spaces with commas, and remove trailing comma
+SUMS_BUNDLE_STAGE_STATS=$(echo "$VALUES_BUNDLE_STAGE_STATS" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$HEADERS_BUNDLE_STAGE_STATS" ]; then
+    HEADERS_BUNDLE_STAGE_STATS=",$HEADERS_BUNDLE_STAGE_STATS"
+    echo "bundle_stage-stats" >> "$OUTPUT_FILE"
+    echo "$SUMS_BUNDLE_STAGE_STATS" >> "$OUTPUT_FILE"
+    echo "$HEADERS_BUNDLE_STAGE_STATS" >> "$OUTPUT_FILE"
+    echo "$VALUES_BUNDLE_STAGE_STATS" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+
+### bundle_stage-loop_stats
+HEADERS_BUNDLE_STAGE_LOOP_STATS=$(grep bundle_stage-loop_stats "$LOG_FILE" | \
+    awk -F "bundle_stage-loop_stats" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+# Extract values and replace spaces with commas
+VALUES_BUNDLE_STAGE_LOOP_STATS=$(paste -d',' <(
+    grep bundle_stage-loop_stats "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep bundle_stage-loop_stats "$LOG_FILE" | \
+    awk -F bundle_stage-loop_stats '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+# Compute column sums, replace spaces with commas, and remove trailing comma
+SUMS_BUNDLE_STAGE_LOOP_STATS=$(echo "$VALUES_BUNDLE_STAGE_LOOP_STATS" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$HEADERS_BUNDLE_STAGE_LOOP_STATS" ]; then
+    HEADERS_BUNDLE_STAGE_LOOP_STATS=",$HEADERS_BUNDLE_STAGE_LOOP_STATS"
+    echo "bundle_stage-loop_stats" >> "$OUTPUT_FILE"
+    echo "$SUMS_BUNDLE_STAGE_LOOP_STATS" >> "$OUTPUT_FILE"
+    echo "$HEADERS_BUNDLE_STAGE_LOOP_STATS" >> "$OUTPUT_FILE"
+    echo "$VALUES_BUNDLE_STAGE_LOOP_STATS" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
 HEADERS_LEADER_SLOT_TRANSACTION_ERROR=$(grep banking_stage-leader_slot_transaction_errors "$LOG_FILE" | \
     awk -F "banking_stage-leader_slot_transaction_errors" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
