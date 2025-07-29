@@ -217,7 +217,7 @@ def download_snapshot(bucket, full_prefix, local_base_dir):
 
 #         blob.download_to_filename(local_path)
 
-def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id):
+def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id, version):
     os.makedirs(log_dir, exist_ok=True)
     log_filename = f"{first_slot}_{test_name}.log" if test_name else f"{first_slot}.log"
     log_file_path = os.path.join(log_dir, log_filename)
@@ -230,6 +230,9 @@ def simulate_snapshot(snapshot_dir, first_slot, name, log_dir, repo_path, test_n
         '--first-simulated-slot', str(first_slot)
     ]
 
+    if version:
+        cmd.extend(['--version', version])
+        
     env = os.environ.copy()
     env["LD_LIBRARY_PATH"] = f"{env.get('LD_LIBRARY_PATH', '')}:{os.path.join(repo_path, 'target/release')}"
 
@@ -306,6 +309,7 @@ def main():
     prefix = config['prefix'].rstrip('/') + "/"
     download_path = config['download_path'].rstrip('/')
     repo_path = config['test_repo_path']
+    tracedata_version = config.get('tracedata_version')
     test_name = args.test_name if args.test_name else config.get('test_name', '')
     sheet_id = config['spreadsheet_id']
     log_dir = os.path.join(repo_path, 'simulation_logs')
@@ -335,7 +339,7 @@ def main():
             logging.info(f"⬇️ Downloading snapshot {name} from GCP...")
             download_snapshot(bucket, full_prefix, download_path)
 
-        simulate_snapshot(local_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id)
+        simulate_snapshot(local_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id, tracedata_version)
 
     logging.info("✅ All simulations completed.")
 if __name__ == "__main__":

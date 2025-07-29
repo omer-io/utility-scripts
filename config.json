@@ -1,18 +1,23 @@
 {
-  "test_repo_path": "/home/ubuntu/omer/rakurai_jito_private/",
-  "test_name": "sched_1_0",
+  "test_repo_path": "/home/omer.jamil/v2.3.5/rakurai_jito_private",
+  "test_name": "v2.3.5-test-omer",
   "bucket": "mainnet-traces",
   "prefix": "mainnet_snapshots/",
   "download_path": "/mnt/ramdisk",
-  "spreadsheet_id": "1AR-NUVWK4Pf9SUrpXZAimaqNjwmhg6MKHZNgfe-YxJQ",
+  "spreadsheet_id": "1d8NFsle8haVRXrsEO2avgquhkQ9YWWOX1hoGmlL7k9U",
+  "tracedata_version": "2.2",
   "directories": [
     {
-      "name": "snapshot-337206608-337206628",
-      "first_simulated_slot": 337206628
+      "name": "snapshot-348702392-348702412",
+      "first_simulated_slot": 348702412
     },
     {
-      "name": "snapshot-337101596-337101616",
-      "first_simulated_slot": 337101616
+      "name": "snapshot-348998344-348998364",
+      "first_simulated_slot": 348998364
+    },
+    {
+      "name": "snapshot-350429900-350429920",
+      "first_simulated_slot": 350429920
     }
   ]
 }
