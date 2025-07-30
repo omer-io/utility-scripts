@@ -5,7 +5,6 @@
   "prefix": "mainnet_snapshots/",
   "download_path": "/mnt/ramdisk",
   "spreadsheet_id": "1d8NFsle8haVRXrsEO2avgquhkQ9YWWOX1hoGmlL7k9U",
-  "tracedata_version": "2.2",
   "directories": [
     {
       "name": "snapshot-348702392-348702412",
