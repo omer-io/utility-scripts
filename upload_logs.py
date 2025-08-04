@@ -115,11 +115,13 @@ if __name__ == '__main__':
     for section_name, data in sections_data.items():
         num_columns = max(len(row) for row in data)  # Calculate max columns for the section
         num_rows = len(data) 
-        if section_name == "banking_stage_scheduler_reception_slot_counts":
+        if section_name == "banking_stage_scheduler_reception_slot_counts" or section_name == "banking_stage_scheduler_reception_slot_counts_extra_stats":
             start_col = 0  # Column A
             start_row = row_tracker.get("banking_stage_scheduler_reception_counts", 1)
+            if start_row == 1:
+                start_row = row_tracker.get("banking_stage_scheduler_reception_counts_extra_stats", 1)
         elif section_name == "banking_stage_scheduler_slot_counts":
-            if "banking_stage_scheduler_reception_slot_counts" not in sections_data and "banking_stage_scheduler_reception_counts" not in sections_data:
+            if "banking_stage_scheduler_reception_slot_counts" not in sections_data and "banking_stage_scheduler_reception_slot_counts_extra_stats" not in sections_data and "banking_stage_scheduler_reception_counts" not in sections_data and "banking_stage_scheduler_reception_counts_extra_stats" not in sections_data:
                 start_col = 0
             else:
                 start_col = 15  # Column P
@@ -129,5 +131,5 @@ if __name__ == '__main__':
             start_row = 1
         upload_csv_to_tab(spreadsheet_id, tab_title, section_name, data, start_col, start_row)
         row_tracker[section_name] = start_row + num_rows
-        if section_name not in ("banking_stage_scheduler_reception_slot_counts", "banking_stage_scheduler_slot_counts"):
+        if section_name not in ("banking_stage_scheduler_reception_slot_counts", "banking_stage_scheduler_reception_slot_counts_extra_stats", "banking_stage_scheduler_slot_counts"):
             current_col += num_columns + 2

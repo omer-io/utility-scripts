@@ -18,75 +18,139 @@ if [ ! -f "$LOG_FILE" ]; then
     exit 2
 fi
 
+HAS_EXTRA_STATS=$(grep -q banking_stage_scheduler_reception_counts_extra_stats "$LOG_FILE" && echo "yes" || echo "no")
+
+if [ "$HAS_EXTRA_STATS" = "no" ]; then
+    # Extract headers
+    HEADERS=$(grep banking_stage_scheduler_reception_counts "$LOG_FILE" | \
+        awk -F "banking_stage_scheduler_reception_counts" '{print $2}' | \
+        awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+        sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+    # Extract values and replace spaces with commas
+    VALUES=$(paste -d',' <(
+        grep banking_stage_scheduler_reception_counts "$LOG_FILE" | awk '{print $1}' | \
+        awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+    ) <(
+        grep banking_stage_scheduler_reception_counts "$LOG_FILE" | \
+        awk -F banking_stage_scheduler_reception_counts '{print $2}' | \
+        awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+        sed 's/,$//g'
+    ))
+
+    # Compute column sums, replace spaces with commas, and remove trailing comma
+    SUMS=$(echo "$VALUES" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+    if [ -n "$HEADERS" ]; then
+        HEADERS=",$HEADERS"
+        echo "banking_stage_scheduler_reception_counts" >> "$OUTPUT_FILE"
+        echo "$SUMS" >> "$OUTPUT_FILE"
+        echo "$HEADERS" >> "$OUTPUT_FILE"
+        echo "$VALUES" >> "$OUTPUT_FILE"
+        echo -e "\n" >> "$OUTPUT_FILE"
+    fi
+
+    HEADERS=$(grep banking_stage_scheduler_reception_slot_counts "$LOG_FILE" | \
+        awk -F "banking_stage_scheduler_reception_slot_counts" '{print $2}' | \
+        awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+        sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+    # Extract and append banking_stage_scheduler_slot_counts values
+    SLOT_VALUES=$(paste -d',' <(
+        grep banking_stage_scheduler_reception_slot_counts "$LOG_FILE" | awk '{print $1}' | \
+        awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+    ) <(
+        grep banking_stage_scheduler_reception_slot_counts "$LOG_FILE" | \
+        awk -F "banking_stage_scheduler_reception_slot_counts" '{print $2}' | \
+        awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | sed 's/,$//'
+    ))
+
+    # Compute column sums for slot values
+    SLOT_SUMS=$(echo "$SLOT_VALUES" | awk -F',' '{for (i=2; i<NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+    if [ -n "$HEADERS" ]; then
+        HEADERS=",$HEADERS"
+        echo "banking_stage_scheduler_reception_slot_counts" >> "$OUTPUT_FILE"
+        echo "$SLOT_SUMS" >> "$OUTPUT_FILE"
+        echo "$HEADERS" >> "$OUTPUT_FILE"
+        echo "$SLOT_VALUES" >> "$OUTPUT_FILE"
+        echo -e "\n" >> "$OUTPUT_FILE"
+    fi
+fi
+### extra stats reception ####
+
 # Extract headers
-HEADERS=$(grep banking_stage_scheduler_reception_counts "$LOG_FILE" | \
-    awk -F "banking_stage_scheduler_reception_counts" '{print $2}' | \
+HEADERS_RECEPTION_EXTRA_STATS=$(grep banking_stage_scheduler_reception_counts_extra_stats "$LOG_FILE" | \
+    awk -F "banking_stage_scheduler_reception_counts_extra_stats" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
     sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
 
 # Extract values and replace spaces with commas
-VALUES=$(paste -d',' <(
-    grep banking_stage_scheduler_reception_counts "$LOG_FILE" | awk '{print $1}' | \
+VALUES_RECEPTION_EXTRA_STATS=$(paste -d',' <(
+    grep banking_stage_scheduler_reception_counts_extra_stats "$LOG_FILE" | awk '{print $1}' | \
     awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
 ) <(
-    grep banking_stage_scheduler_reception_counts "$LOG_FILE" | \
-    awk -F banking_stage_scheduler_reception_counts '{print $2}' | \
+    grep banking_stage_scheduler_reception_counts_extra_stats "$LOG_FILE" | \
+    awk -F banking_stage_scheduler_reception_counts_extra_stats '{print $2}' | \
     awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
     sed 's/,$//g'
 ))
 
 # Compute column sums, replace spaces with commas, and remove trailing comma
-SUMS=$(echo "$VALUES" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+SUMS_RECEPTION_EXTRA_STATS=$(echo "$VALUES_RECEPTION_EXTRA_STATS" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
-if [ -n "$HEADERS" ]; then
-    HEADERS=",$HEADERS"
-    echo "banking_stage_scheduler_reception_counts" >> "$OUTPUT_FILE"
-    echo "$SUMS" >> "$OUTPUT_FILE"
-    echo "$HEADERS" >> "$OUTPUT_FILE"
-    echo "$VALUES" >> "$OUTPUT_FILE"
+if [ -n "$HEADERS_RECEPTION_EXTRA_STATS" ]; then
+    HEADERS_RECEPTION_EXTRA_STATS=",$HEADERS_RECEPTION_EXTRA_STATS"
+    echo "banking_stage_scheduler_reception_counts_extra_stats" >> "$OUTPUT_FILE"
+    echo "$SUMS_RECEPTION_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$HEADERS_RECEPTION_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$VALUES_RECEPTION_EXTRA_STATS" >> "$OUTPUT_FILE"
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
-HEADERS=$(grep banking_stage_scheduler_reception_slot_counts "$LOG_FILE" | \
-    awk -F "banking_stage_scheduler_reception_slot_counts" '{print $2}' | \
+HEADERS_RECEPTION_SLOT_EXTRA_STATS=$(grep banking_stage_scheduler_reception_slot_counts_extra_stats "$LOG_FILE" | \
+    awk -F "banking_stage_scheduler_reception_slot_counts_extra_stats" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
     sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
 
 # Extract and append banking_stage_scheduler_slot_counts values
-SLOT_VALUES=$(paste -d',' <(
-    grep banking_stage_scheduler_reception_slot_counts "$LOG_FILE" | awk '{print $1}' | \
+SLOT_VALUES_RECEPTION_SLOT_EXTRA_STATS=$(paste -d',' <(
+    grep banking_stage_scheduler_reception_slot_counts_extra_stats "$LOG_FILE" | awk '{print $1}' | \
     awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
 ) <(
-    grep banking_stage_scheduler_reception_slot_counts "$LOG_FILE" | \
-    awk -F "banking_stage_scheduler_reception_slot_counts" '{print $2}' | \
+    grep banking_stage_scheduler_reception_slot_counts_extra_stats "$LOG_FILE" | \
+    awk -F "banking_stage_scheduler_reception_slot_counts_extra_stats" '{print $2}' | \
     awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | sed 's/,$//'
 ))
 
 # Compute column sums for slot values
-SLOT_SUMS=$(echo "$SLOT_VALUES" | awk -F',' '{for (i=2; i<NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+SLOT_SUMS_RECEPTION_SLOT_EXTRA_STATS=$(echo "$SLOT_VALUES_RECEPTION_SLOT_EXTRA_STATS" | awk -F',' '{for (i=2; i<NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
 
-if [ -n "$HEADERS" ]; then
-    HEADERS=",$HEADERS"
-    echo "banking_stage_scheduler_reception_slot_counts" >> "$OUTPUT_FILE"
-    echo "$SLOT_SUMS" >> "$OUTPUT_FILE"
-    echo "$HEADERS" >> "$OUTPUT_FILE"
-    echo "$SLOT_VALUES" >> "$OUTPUT_FILE"
+if [ -n "$HEADERS_RECEPTION_SLOT_EXTRA_STATS" ]; then
+    HEADERS_RECEPTION_SLOT_EXTRA_STATS=",$HEADERS_RECEPTION_SLOT_EXTRA_STATS"
+    echo "banking_stage_scheduler_reception_slot_counts_extra_stats" >> "$OUTPUT_FILE"
+    echo "$SLOT_SUMS_RECEPTION_SLOT_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$HEADERS_RECEPTION_SLOT_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$SLOT_VALUES_RECEPTION_SLOT_EXTRA_STATS" >> "$OUTPUT_FILE"
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
 #### Extract banking_stage_scheduler_counts ####
-HEADERS_SCHEDULER=$(grep banking_stage_scheduler_counts "$LOG_FILE" | \
+HEADERS_SCHEDULER=$(grep -x ".*banking_stage_scheduler_counts.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_counts" | \
     awk -F "banking_stage_scheduler_counts" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
     sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
 
 
 VALUES_SCHEDULER=$(paste -d',' <(
-    grep banking_stage_scheduler_counts "$LOG_FILE" | awk '{print $1}' | \
-    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+    grep -x ".*banking_stage_scheduler_counts.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_counts" | \
+    awk '{print $1}' | awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
 ) <(
-    grep banking_stage_scheduler_counts "$LOG_FILE" | \
-    awk -F banking_stage_scheduler_counts '{print $2}' | \
+    grep -x ".*banking_stage_scheduler_counts.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_counts" | \
+    awk -F "banking_stage_scheduler_counts" '{print $2}' | \
     awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
     sed 's/,$//g'
 ))
@@ -102,17 +166,50 @@ if [ -n "$HEADERS_SCHEDULER" ]; then
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
+
+#### Extract banking_stage_scheduler_counts_extra_stats ####
+HEADERS_SCHEDULER_EXTRA_STATS=$(grep banking_stage_scheduler_counts_extra_stats "$LOG_FILE" | \
+    awk -F "banking_stage_scheduler_counts_extra_stats" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+
+VALUES_SCHEDULER_EXTRA_STATS=$(paste -d',' <(
+    grep banking_stage_scheduler_counts_extra_stats "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep banking_stage_scheduler_counts_extra_stats "$LOG_FILE" | \
+    awk -F banking_stage_scheduler_counts_extra_stats '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+SUMS_SCHEDULER_EXTRA_STATS=$(echo "$VALUES_SCHEDULER_EXTRA_STATS" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$HEADERS_SCHEDULER_EXTRA_STATS" ]; then
+    HEADERS_SCHEDULER_EXTRA_STATS=",$HEADERS_SCHEDULER_EXTRA_STATS"
+    echo "banking_stage_scheduler_counts_extra_stats" >> "$OUTPUT_FILE"
+    echo "$SUMS_SCHEDULER_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$HEADERS_SCHEDULER_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$VALUES_SCHEDULER_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+
 #### Extract banking_stage_scheduler_slot_counts ####
-HEADERS_SCHEDULER_SLOT=$(grep banking_stage_scheduler_slot_counts "$LOG_FILE" | \
+HEADERS_SCHEDULER_SLOT=$(grep -x ".*banking_stage_scheduler_slot_counts.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_slot_counts" | \
     awk -F "banking_stage_scheduler_slot_counts" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
     sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
 
 SLOT_VALUES_SCHEDULER=$(paste -d',' <(
-    grep banking_stage_scheduler_slot_counts "$LOG_FILE" | awk '{print $1}' | \
-    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+    grep -x ".*banking_stage_scheduler_slot_counts.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_slot_counts" | \
+    awk '{print $1}' | awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
 ) <(
-    grep banking_stage_scheduler_slot_counts "$LOG_FILE" | \
+    grep -x ".*banking_stage_scheduler_slot_counts.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_slot_counts" | \
     awk -F "banking_stage_scheduler_slot_counts" '{print $2}' | \
     awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | sed 's/,$//'
 ))
@@ -125,6 +222,35 @@ if [ -n "$HEADERS_SCHEDULER_SLOT" ]; then
     echo "$SLOT_SUMS_SCHEDULER" >> "$OUTPUT_FILE"
     echo "$HEADERS_SCHEDULER_SLOT" >> "$OUTPUT_FILE"
     echo "$SLOT_VALUES_SCHEDULER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+#### Extract banking_stage_scheduler_slot_counts_extra_stats ####
+HEADERS_SCHEDULER_SLOT_EXTRA_STATS=$(grep -x ".*banking_stage_scheduler_slot_counts_extra_stats.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_slot_counts_extra_stats" | \
+    awk -F "banking_stage_scheduler_slot_counts_extra_stats" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+SLOT_VALUES_SCHEDULER_EXTRA_STATS=$(paste -d',' <(
+    grep -x ".*banking_stage_scheduler_slot_counts_extra_stats.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_slot_counts_extra_stats" | \
+    awk '{print $1}' | awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep -x ".*banking_stage_scheduler_slot_counts_extra_stats.*" "$LOG_FILE" | \
+    grep -w "banking_stage_scheduler_slot_counts_extra_stats" | \
+    awk -F "banking_stage_scheduler_slot_counts_extra_stats" '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | sed 's/,$//'
+))
+
+SLOT_SUMS_SCHEDULER_EXTRA_STATS=$(echo "$SLOT_VALUES_SCHEDULER_EXTRA_STATS" | awk -F',' '{for (i=2; i<NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$HEADERS_SCHEDULER_SLOT_EXTRA_STATS" ]; then
+    HEADERS_SCHEDULER_SLOT_EXTRA_STATS=",$HEADERS_SCHEDULER_SLOT_EXTRA_STATS"
+    echo "banking_stage_scheduler_slot_counts_extra_stats" >> "$OUTPUT_FILE"
+    echo "$SLOT_SUMS_SCHEDULER_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$HEADERS_SCHEDULER_SLOT_EXTRA_STATS" >> "$OUTPUT_FILE"
+    echo "$SLOT_VALUES_SCHEDULER_EXTRA_STATS" >> "$OUTPUT_FILE"
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
