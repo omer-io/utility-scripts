@@ -1,9 +1,13 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <log_file> <tab_title>"
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    echo "Usage: $0 <log_file> <tab_title> [sheet_id]"
     exit 1
 fi
+
+LOG_FILE="$1"
+TAB_TITLE="$2"
+SHEET_ID="${3:-}"
 
 LOG_FILE="$1"
 TAB_TITLE="$2"
@@ -718,4 +722,8 @@ fi
 echo "CSV file generated: $OUTPUT_FILE"
 
 # Upload CSV to Google Sheets
-python3 upload_logs.py "$OUTPUT_FILE" "$TAB_TITLE"
+if [ -n "$SHEET_ID" ]; then
+    python3 upload_logs.py "$OUTPUT_FILE" "$TAB_TITLE" --sheet_id "$SHEET_ID"
+else
+    python3 upload_logs.py "$OUTPUT_FILE" "$TAB_TITLE"
+fi

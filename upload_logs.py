@@ -91,6 +91,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("csv_file", help="Path to the CSV file")
     parser.add_argument("tab_title", help="Title for the tab")
+    parser.add_argument("--sheet_id", help="Spreadsheet id")
     args = parser.parse_args()
 
     csv_file = args.csv_file
@@ -100,6 +101,9 @@ if __name__ == '__main__':
         config = json.load(f)
         
     spreadsheet_id = config['spreadsheet_id']
+    if args.sheet_id:
+        spreadsheet_id = args.sheet_id
+
     sections_data = process_csv(csv_file)
     
     # Add a new tab to the existing Google Sheet
