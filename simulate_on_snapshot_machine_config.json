@@ -3,16 +3,12 @@
   "logs_spreadsheet_id": "1K2-6eQwngAZ0uX6M6KfjyHe17z9c85nltRkDTqphhLo",
   "test_repo_paths": [
     {
-      "path": "/home/omer.jamil/v2.3.5/rakurai_jito_private",
-      "test_name": "v2.3.5-test-omer"
+      "path": "/home/sol/solana_snapshot_generator/rakurai_jito_private_adnan",
+      "test_name": "v2.3.6-test-adnan"
     },
     {
-      "path": "/home/omer.jamil/v2.3.5/rakurai_jito_private",
-      "test_name": "v2.3.5-test-omer"
-    },
-    {
-      "path": "/home/omer.jamil/v2.3.5/rakurai_jito_private",
-      "test_name": "v2.3.5-test-omer"
+      "path": "/home/sol/solana_snapshot_generator/rakurai_jito_private_mainnet",
+      "test_name": "v2.3.5-test-mainnet"
     }
   ]
 }
