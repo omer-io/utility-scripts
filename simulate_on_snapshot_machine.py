@@ -50,6 +50,54 @@ def extract_metrics_from_log(log_file_path):
         logging.error(f"❌ Failed to extract metrics from log: {e}")
         return [], [], 0
 
+def update_sheets(current_epoch):
+    """
+    Create new summary and logs Google Sheets, give 'rakurai.io' domain edit access,
+    and update simulate_on_snapshot_machine_config.json.
+    """
+    logging.info(f"🔄 Creating new sheets for epoch {current_epoch}...")
+
+    # Google Sheets API auth
+    scope = ['https://www.googleapis.com/auth/spreadsheets']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    gc = gspread.authorize(creds)
+
+    # Create Summary Sheet
+    summary_title = f"Summary_Epoch_{current_epoch}"
+    summary_sheet = gc.create(summary_title)
+    summary_id = summary_sheet.id
+    logging.info(f"📄 Created Summary sheet: {summary_title} (ID: {summary_id})")
+
+    # Create Logs Sheet
+    logs_title = f"Logs_Epoch_{current_epoch}"
+    logs_sheet = gc.create(logs_title)
+    logs_id = logs_sheet.id
+    logging.info(f"📄 Created Logs sheet: {logs_title} (ID: {logs_id})")
+
+    # Share with organization domain (editor access)
+    try:
+        summary_sheet.share(None, perm_type='domain', role='writer', domain='rakurai.io')
+        logs_sheet.share(None, perm_type='domain', role='writer', domain='rakurai.io')
+        logging.info("🌐 Granted 'rakurai.io' domain editor access to new sheets.")
+    except Exception as e:
+        logging.warning(f"⚠️ Could not set domain sharing: {e}")
+
+    # Load existing config
+    config_path = "simulate_on_snapshot_machine_config.json"
+    with open(config_path, "r") as f:
+        config = json.load(f)
+
+    # Update config with new sheet IDs and epoch
+    config['summary_spreadsheet_id'] = summary_id
+    config['logs_spreadsheet_id'] = logs_id
+    config['epoch'] = current_epoch
+
+    # Save updated config
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+
+    logging.info(f"✅ Updated {config_path} with new sheet IDs and epoch {current_epoch}")
+
 def upload_to_sheet(summary_sheet_id, logs_sheet_id, first_slot, test_name, block_cu, block_rewards, total_tips, log_file_path):
     scope = ['https://www.googleapis.com/auth/spreadsheets']
     creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
@@ -76,6 +124,7 @@ def upload_to_sheet(summary_sheet_id, logs_sheet_id, first_slot, test_name, bloc
         header += [f"Reward-{i+1}" for i in range(len(block_rewards))]
         header += ["SumReward"]
         header += ["Tips"]
+        header += ["LogsSheet"]
         sheet.append_row(header, value_input_option='USER_ENTERED')
 
         format_as_num_start = header.index("FirstSlot")
@@ -156,7 +205,7 @@ def upload_to_sheet(summary_sheet_id, logs_sheet_id, first_slot, test_name, bloc
     reward_sum = sum(block_rewards)
     # reward_avg = round(reward_sum / len(block_rewards), 2)
 
-    row = [test_name, first_slot] + ["--"] + block_cu + [cu_avg] + ["--"] + block_rewards + [reward_sum] + [total_tips]
+    row = [test_name, first_slot] + ["--"] + block_cu + [cu_avg] + ["--"] + block_rewards + [reward_sum] + [total_tips] + [f"https://docs.google.com/spreadsheets/d/{logs_sheet_id}/edit"]
     sheet.append_row(row, value_input_option='USER_ENTERED')
 
     logging.info(f"📤 Uploaded results for slot {first_slot}, test name {test_name} to Google Sheet: {summary_sheet_id}, tab name: {first_slot}")
@@ -249,9 +298,13 @@ def main():
         config = json.load(f)
 
     test_repo_paths = config['test_repo_paths']
-
     summary_sheet_id = config['summary_spreadsheet_id']
     logs_sheet_id = config['logs_spreadsheet_id']
+    epoch = config['epoch']
+
+    current_epoch = first_simulated_slot // 432000
+    if current_epoch != epoch:
+        update_sheets(current_epoch)
 
     logging.info(f"📦 Running batch simulation for {len(test_repo_paths)} directories from simulate_on_snapshot_machine_config.json")
     logging.info(f"📦 CLI args: snapshot dir={args.snapshot_dir} first slot={args.slot}")
