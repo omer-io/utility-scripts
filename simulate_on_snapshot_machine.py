@@ -306,6 +306,14 @@ def main():
     if current_epoch != epoch:
         update_sheets(current_epoch)
 
+    with open("simulate_on_snapshot_machine_config.json") as f:
+        config = json.load(f)
+
+    test_repo_paths = config['test_repo_paths']
+    summary_sheet_id = config['summary_spreadsheet_id']
+    logs_sheet_id = config['logs_spreadsheet_id']
+    epoch = config['epoch']
+    
     logging.info(f"📦 Running batch simulation for {len(test_repo_paths)} directories from simulate_on_snapshot_machine_config.json")
     logging.info(f"📦 CLI args: snapshot dir={args.snapshot_dir} first slot={args.slot}")
 
