@@ -1,15 +1,15 @@
 {
-  "epoch": 831,
-  "summary_spreadsheet_id": "1K2-6eQwngAZ0uX6M6KfjyHe17z9c85nltRkDTqphhLo",
-  "logs_spreadsheet_id": "1K2-6eQwngAZ0uX6M6KfjyHe17z9c85nltRkDTqphhLo",
+  "epoch": 832,
+  "summary_spreadsheet_id": "1qfhJoBMLOc_2sZqz3gA0F_1pouB_AYl4RzvgCh-Iz-g",
+  "logs_spreadsheet_id": "1bL2i397il4MJ-EpEEE1FkO5Rp2UBhRr7WX-71Fpc2cY",
   "test_repo_paths": [
     {
-      "path": "/home/sol/rakurai_jito_private_adnan",
-      "test_name": "v2.3.6-test-adnan"
-    },
-    {
       "path": "/home/sol/rakurai_jito_private_mainnet",
-      "test_name": "v2.3.5-test-mainnet"
+      "test_name": "v2.3.6-pre-release"
+    },    
+    {
+      "path": "/home/sol/rakurai_jito_private_adnan",
+      "test_name": "scheduler-2.0-v2.3.6"
     }
   ]
 }
