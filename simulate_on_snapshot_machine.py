@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from google.cloud import storage
 from oauth2client.service_account import ServiceAccountCredentials
+from googleapiclient.discovery import build
 
 def extract_metrics_from_log(log_file_path):
     try:
@@ -52,13 +53,18 @@ def extract_metrics_from_log(log_file_path):
 
 def update_sheets(current_epoch):
     """
-    Create new summary and logs Google Sheets, give 'rakurai.io' domain edit access,
+    Create new summary and logs Google Sheets,
+    give 'rakurai.io' domain edit access,
+    give 'omer@rakurai.io' direct edit access,
     and update simulate_on_snapshot_machine_config.json.
     """
     logging.info(f"🔄 Creating new sheets for epoch {current_epoch}...")
 
     # Google Sheets API auth
-    scope = ['https://www.googleapis.com/auth/spreadsheets']
+    scope = [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+    ]
     creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
     gc = gspread.authorize(creds)
 
@@ -74,13 +80,48 @@ def update_sheets(current_epoch):
     logs_id = logs_sheet.id
     logging.info(f"📄 Created Logs sheet: {logs_title} (ID: {logs_id})")
 
-    # Share with organization domain (editor access)
+    # Build Drive API service
+    drive_service = build('drive', 'v3', credentials=creds)
+
     try:
-        summary_sheet.share(None, perm_type='domain', role='writer', domain='rakurai.io')
-        logs_sheet.share(None, perm_type='domain', role='writer', domain='rakurai.io')
-        logging.info("🌐 Granted 'rakurai.io' domain editor access to new sheets.")
+        # Share with organization domain
+        for sheet_id in [summary_id, logs_id]:
+            drive_service.permissions().create(
+                fileId=sheet_id,
+                body={
+                    'type': 'domain',
+                    'role': 'writer',
+                    'domain': 'rakurai.io'
+                },
+                fields='id'
+            ).execute()
+
+        # Share with specific user
+        for sheet_id in [summary_id, logs_id]:
+            drive_service.permissions().create(
+                fileId=sheet_id,
+                body={
+                    'type': 'user',
+                    'role': 'writer',
+                    'emailAddress': 'omer@rakurai.io'
+                },
+                fields='id'
+            ).execute()
+
+            drive_service.permissions().create(
+                fileId=sheet_id,
+                body={
+                    'type': 'user',
+                    'role': 'writer',
+                    'emailAddress': 'upload-logs@upload-logs-451118.iam.gserviceaccount.com'
+                },
+                fields='id'
+            ).execute()
+
+        logging.info("🌐 Granted domain 'rakurai.io' and user 'omer@rakurai.io' editor access to new sheets.")
+
     except Exception as e:
-        logging.warning(f"⚠️ Could not set domain sharing: {e}")
+        logging.warning(f"⚠️ Could not set sharing permissions: {e}")
 
     # Load existing config
     config_path = "simulate_on_snapshot_machine_config.json"
