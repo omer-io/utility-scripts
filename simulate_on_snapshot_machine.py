@@ -252,7 +252,7 @@ def upload_to_sheet(summary_sheet_id, logs_sheet_id, first_slot, test_name, bloc
     logging.info(f"📤 Uploaded results for slot {first_slot}, test name {test_name} to Google Sheet: {summary_sheet_id}, tab name: {first_slot}")
 
     try:
-        log_parser_cmd = ['./logs_parser.sh', log_file_path, f"{test_name}_{first_slot}, {logs_sheet_id}"]
+        log_parser_cmd = ['./logs_parser.sh', log_file_path, f"{test_name}_{first_slot}", f"{logs_sheet_id}"]
         subprocess.run(log_parser_cmd, check=True)
         logging.info(f"📄 Ran logs_parser.sh on {log_file_path} for tab {test_name}_{first_slot}")
     except subprocess.CalledProcessError as e:
