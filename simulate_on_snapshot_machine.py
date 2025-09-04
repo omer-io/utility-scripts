@@ -343,12 +343,12 @@ def main():
     logs_sheet_id = config['logs_spreadsheet_id']
     epoch = config['epoch']
 
-    current_epoch = first_simulated_slot // 432000
-    if current_epoch != epoch:
-        update_sheets(current_epoch)
+    # current_epoch = first_simulated_slot // 432000
+    # if current_epoch != epoch:
+    #     update_sheets(current_epoch)
 
-    with open("simulate_on_snapshot_machine_config.json") as f:
-        config = json.load(f)
+    # with open("simulate_on_snapshot_machine_config.json") as f:
+    #     config = json.load(f)
 
     test_repo_paths = config['test_repo_paths']
     summary_sheet_id = config['summary_spreadsheet_id']
