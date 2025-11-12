@@ -5,11 +5,11 @@
   "test_repo_paths": [
     {
       "path": "/home/sol/rakurai_jito_private_mainnet",
-      "test_name": "v2.3.10-rakurai.1"
+      "test_name": "v3.0.10-rakurai"
     },    
     {
       "path": "/home/sol/rakurai_jito_private_standard",
-      "test_name": "v2.3.10-standard"
+      "test_name": "v3.0.10-standard"
     }
   ]
 }
