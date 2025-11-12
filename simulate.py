@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import shutil
@@ -183,21 +184,132 @@ def clean_download_dir(download_path, keep_dirs):
         except Exception as e:
             logging.warning(f"⚠️ Failed to remove {item_path}: {e}")
 
-def download_snapshot(bucket, full_prefix, local_base_dir):
-    gcs_uri = f"gs://{bucket}/{full_prefix.rstrip('/')}/"
-    cmd = [
-        "gcloud", "storage", "cp",
-        gcs_uri,
-        local_base_dir,
-        "--recursive"
-    ]
-    logging.info(f"🚀 Running command: {' '.join(cmd)}")
+def download_snapshot(bucket, full_prefix, local_base_dir, snapshot_dir, first_slot):
+    """
+    Downloads a snapshot directory from GCP and processes it into individual slot snapshots.
 
+    Args:
+        bucket (str): GCS bucket name.
+        full_prefix (str): Path inside bucket (e.g. 'snapshots/mainnet/snapshot-123-124-125').
+        local_base_dir (str): Base local directory to store snapshots.
+        first_slot (int): First slot (used only for naming consistency if needed).
+
+    Returns:
+        None
+    """
     try:
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
-        logging.info("✅ Download completed successfully.")
+        # Step 1: Prepare GCS URI and download
+        gcs_uri = f"gs://{bucket}/{full_prefix.rstrip('/')}/"
+        logging.info(f"Starting snapshot download from {gcs_uri}")
+
+        # Download entire directory using gcloud CLI
+        subprocess.run(
+            ["gcloud", "storage", "cp", "-r", gcs_uri, local_base_dir],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+
+        logging.info(f"Downloaded snapshot directory: {snapshot_dir}")
+
+        # Step 3: Check for incremental snapshot files
+        files_in_snapshot = os.listdir(snapshot_dir)
+        incremental_files = [f for f in files_in_snapshot if f.startswith("incremental")]
+
+        if not incremental_files:
+            logging.warning("No incremental snapshot files found — skipping processing.")
+            return
+
+        # Step 4: Parse slots from snapshot directory name
+        match = re.search(r"snapshot-(.+)$", os.path.basename(snapshot_dir))
+        if not match:
+            logging.error("Could not extract slots from directory name.")
+            return
+
+        slots = match.group(1).split("-")
+        if len(slots) == 1:
+            logging.info("Only one slot found — no splitting needed.")
+            return
+
+        logging.info(f"Found multiple slots: {slots}, processing...")
+
+        # Step 5: Create individual snapshot directories
+        individual_dirs = []
+        for slot in slots:
+            slot_dir = os.path.join(local_base_dir, f"snapshot-{slot}")
+            os.makedirs(slot_dir, exist_ok=True)
+            individual_dirs.append((slot, slot_dir))
+            logging.debug(f"Created individual slot directory: {slot_dir}")
+
+        # Step 6: Copy snapshot* files to each slot directory
+        for file_name in files_in_snapshot:
+            if file_name.startswith("snapshot"):
+                src_file = os.path.join(snapshot_dir, file_name)
+                for _, slot_dir in individual_dirs:
+                    shutil.copy2(src_file, slot_dir)
+        logging.info("Copied base snapshot files to all individual directories.")
+
+        # Step 7: Copy rocksdb directory
+        rocksdb_path = os.path.join(snapshot_dir, "rocksdb")
+        if os.path.isdir(rocksdb_path):
+            for _, slot_dir in individual_dirs:
+                dest = os.path.join(slot_dir, "rocksdb")
+                shutil.copytree(rocksdb_path, dest, dirs_exist_ok=True)
+            logging.info("Copied rocksdb directory to all individual directories.")
+        else:
+            logging.warning("No rocksdb directory found in snapshot.")
+
+        # Step 8: Copy relevant banking_trace directories
+        all_banking_trace_path = os.path.join(snapshot_dir, "all_banking_trace")
+        if os.path.isdir(all_banking_trace_path):
+            all_trace_dirs = os.listdir(all_banking_trace_path)
+            for slot, slot_dir in individual_dirs:
+                pattern = f"banking_trace-{slot}"
+                matching_traces = [d for d in all_trace_dirs if d.startswith(pattern)]
+                if matching_traces:
+                    trace_src = os.path.join(all_banking_trace_path, matching_traces[0])
+                    trace_dest = os.path.join(slot_dir, "banking_trace")
+                    shutil.copytree(trace_src, trace_dest, dirs_exist_ok=True)
+                    logging.debug(f"Copied banking_trace for slot {slot}")
+        else:
+            logging.warning("No all_banking_trace directory found in snapshot.")
+
+        # Step 9: Copy genesis.bin
+        genesis_path = os.path.join(snapshot_dir, "genesis.bin")
+        if os.path.exists(genesis_path):
+            for _, slot_dir in individual_dirs:
+                shutil.copy2(genesis_path, slot_dir)
+            logging.info("Copied genesis.bin to all individual directories.")
+        else:
+            logging.warning("No genesis.bin found in snapshot directory.")
+
+        # Step 10: Assign incremental snapshots to nearest lower slot
+        incremental_info = []
+        for inc_file in incremental_files:
+            m = re.search(r"incremental-snapshot-\d+-(\d+)-", inc_file)
+            if m:
+                incremental_info.append((int(m.group(1)), inc_file))
+
+        incremental_info.sort(key=lambda x: x[0])
+
+        for slot_str, slot_dir in individual_dirs:
+            slot = int(slot_str)
+            smaller = [i for i in incremental_info if i[0] < slot]
+            if not smaller:
+                continue
+            nearest_inc = max(smaller, key=lambda x: x[0])
+            src_file = os.path.join(snapshot_dir, nearest_inc[1])
+            shutil.copy2(src_file, slot_dir)
+            logging.debug(f"Assigned incremental {nearest_inc[1]} to slot {slot}")
+
+        logging.info("Completed splitting and distributing snapshot data successfully.")
+
+        shutil.rmtree(snapshot_dir)
+
     except subprocess.CalledProcessError as e:
-        logging.error(f"❌ Download failed with error:\n{e.stderr}")
+        logging.error(f"GCloud command failed: {e.stderr.strip()}")
+    except Exception as e:
+        logging.exception(f"Unexpected error occurred during snapshot processing: {e}")
 
 # def download_snapshot(bucket, full_prefix, local_base_dir):
 #     client = storage.Client()  # Uses default credentials
@@ -333,12 +445,19 @@ def main():
         full_prefix = prefix + name + "/"
         local_dir = os.path.join(download_path, name)
 
+        individual_name = f"snapshot-{first_slot}"
+        individual_dir = os.path.join(download_path, individual_name)
+
         if os.path.exists(local_dir):
             logging.info(f"⏭️ Skipping downloading {name}: already exists at {local_dir}")
+        elif os.path.exists(individual_dir):
+            logging.info(f"⏭️ Skipping downloading {name}: individual snapshot {individual_name} already exists at {individual_dir}")
         else:
             logging.info(f"⬇️ Downloading snapshot {name} from GCP...")
-            download_snapshot(bucket, full_prefix, download_path)
+            download_snapshot(bucket, full_prefix, download_path, local_dir, first_slot)
 
+        if os.path.exists(individual_dir):
+            local_dir = individual_dir
         simulate_snapshot(local_dir, first_slot, name, log_dir, repo_path, test_name, sheet_id, tracedata_version)
 
     logging.info("✅ All simulations completed.")
