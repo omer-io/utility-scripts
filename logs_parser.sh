@@ -254,6 +254,66 @@ if [ -n "$HEADERS_SCHEDULER_SLOT_EXTRA_STATS" ]; then
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
+#### Extract bam_banking_stage_scheduler_counts ####
+BAM_HEADERS_SCHEDULER=$(grep -x ".*bam_banking_stage_scheduler_counts.*" "$LOG_FILE" | \
+    grep -w "bam_banking_stage_scheduler_counts" | \
+    awk -F "bam_banking_stage_scheduler_counts" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+
+BAM_VALUES_SCHEDULER=$(paste -d',' <(
+    grep -x ".*bam_banking_stage_scheduler_counts.*" "$LOG_FILE" | \
+    grep -w "bam_banking_stage_scheduler_counts" | \
+    awk '{print $1}' | awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep -x ".*bam_banking_stage_scheduler_counts.*" "$LOG_FILE" | \
+    grep -w "bam_banking_stage_scheduler_counts" | \
+    awk -F "bam_banking_stage_scheduler_counts" '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+BAM_SUMS_SCHEDULER=$(echo "$BAM_VALUES_SCHEDULER" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$BAM_HEADERS_SCHEDULER" ]; then
+    BAM_HEADERS_SCHEDULER=",$BAM_HEADERS_SCHEDULER"
+    echo "bam_banking_stage_scheduler_counts" >> "$OUTPUT_FILE"
+    echo "$BAM_SUMS_SCHEDULER" >> "$OUTPUT_FILE"
+    echo "$BAM_HEADERS_SCHEDULER" >> "$OUTPUT_FILE"
+    echo "$BAM_VALUES_SCHEDULER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+#### Extract bam_banking_stage_scheduler_slot_counts ####
+BAM_HEADERS_SCHEDULER_SLOT=$(grep -x ".*bam_banking_stage_scheduler_slot_counts.*" "$LOG_FILE" | \
+    grep -w "bam_banking_stage_scheduler_slot_counts" | \
+    awk -F "bam_banking_stage_scheduler_slot_counts" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+BAM_SLOT_VALUES_SCHEDULER=$(paste -d',' <(
+    grep -x ".*bam_banking_stage_scheduler_slot_counts.*" "$LOG_FILE" | \
+    grep -w "bam_banking_stage_scheduler_slot_counts" | \
+    awk '{print $1}' | awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep -x ".*bam_banking_stage_scheduler_slot_counts.*" "$LOG_FILE" | \
+    grep -w "bam_banking_stage_scheduler_slot_counts" | \
+    awk -F "bam_banking_stage_scheduler_slot_counts" '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | sed 's/,$//'
+))
+
+BAM_SLOT_SUMS_SCHEDULER=$(echo "$BAM_SLOT_VALUES_SCHEDULER" | awk -F',' '{for (i=2; i<NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$BAM_HEADERS_SCHEDULER_SLOT" ]; then
+    BAM_HEADERS_SCHEDULER_SLOT=",$BAM_HEADERS_SCHEDULER_SLOT"
+    echo "bam_banking_stage_scheduler_slot_counts" >> "$OUTPUT_FILE"
+    echo "$BAM_SLOT_SUMS_SCHEDULER" >> "$OUTPUT_FILE"
+    echo "$BAM_HEADERS_SCHEDULER_SLOT" >> "$OUTPUT_FILE"
+    echo "$BAM_SLOT_VALUES_SCHEDULER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
 HEADERS_WORKER=$(grep banking_stage_worker_counts "$LOG_FILE" | \
     awk -F "banking_stage_worker_counts" '{print $2}' | \
     awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
@@ -301,6 +361,85 @@ if [ -n "$HEADERS_WORKER_ERROR" ]; then
     echo "$SUMS_WORKER_ERROR" >> "$OUTPUT_FILE"
     echo "$HEADERS_WORKER_ERROR" >> "$OUTPUT_FILE"
     echo "$VALUES_WORKER_ERROR" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+BAM_HEADERS_WORKER=$(grep bam_banking_stage_worker_counts "$LOG_FILE" | \
+    awk -F "bam_banking_stage_worker_counts" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+BAM_VALUES_WORKER=$(paste -d',' <(
+    grep bam_banking_stage_worker_counts "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep bam_banking_stage_worker_counts "$LOG_FILE" | \
+    awk -F bam_banking_stage_worker_counts '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+BAM_SUMS_WORKER=$(echo "$BAM_VALUES_WORKER" | awk -F',' '{for (i=3; i<NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$BAM_HEADERS_WORKER" ]; then
+    echo "bam_banking_stage_worker_counts" >> "$OUTPUT_FILE"
+    echo "$BAM_SUMS_WORKER" >> "$OUTPUT_FILE"
+    echo "$BAM_HEADERS_WORKER" >> "$OUTPUT_FILE"
+    echo "$BAM_VALUES_WORKER" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+BAM_HEADERS_WORKER_ERROR=$(grep bam_banking_stage_worker_error_metrics "$LOG_FILE" | \
+    awk -F "bam_banking_stage_worker_error_metrics" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+BAM_VALUES_WORKER_ERROR=$(paste -d',' <(
+    grep bam_banking_stage_worker_error_metrics "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep bam_banking_stage_worker_error_metrics "$LOG_FILE" | \
+    awk -F bam_banking_stage_worker_error_metrics '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+BAM_SUMS_WORKER_ERROR=$(echo "$BAM_VALUES_WORKER_ERROR" | awk -F',' '{for (i=3; i<NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$BAM_HEADERS_WORKER_ERROR" ]; then
+    echo "bam_banking_stage_worker_error_metrics" >> "$OUTPUT_FILE"
+    echo "$BAM_SUMS_WORKER_ERROR" >> "$OUTPUT_FILE"
+    echo "$BAM_HEADERS_WORKER_ERROR" >> "$OUTPUT_FILE"
+    echo "$BAM_VALUES_WORKER_ERROR" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+### bam_connection-metrics
+BAM_HEADERS_CONNECTION_METRICS=$(grep bam_connection-metrics "$LOG_FILE" | \
+    awk -F "bam_connection-metrics" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+# Extract values and replace spaces with commas
+BAM_VALUES_CONNECTION_METRICS=$(paste -d',' <(
+    grep bam_connection-metrics "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep bam_connection-metrics "$LOG_FILE" | \
+    awk -F bam_connection-metrics '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+
+# Compute column sums, replace spaces with commas, and remove trailing comma
+BAM_SUMS_CONNECTION_METRICS=$(echo "$BAM_VALUES_CONNECTION_METRICS" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$BAM_HEADERS_CONNECTION_METRICS" ]; then
+    BAM_HEADERS_CONNECTION_METRICS=",$BAM_HEADERS_CONNECTION_METRICS"
+    echo "bam_connection-metrics" >> "$OUTPUT_FILE"
+    echo "$BAM_SUMS_CONNECTION_METRICS" >> "$OUTPUT_FILE"
+    echo "$BAM_HEADERS_CONNECTION_METRICS" >> "$OUTPUT_FILE"
+    echo "$BAM_VALUES_CONNECTION_METRICS" >> "$OUTPUT_FILE"
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
@@ -565,6 +704,55 @@ if [ -n "$HEADERS_WORKER_TIMING" ]; then
     echo "$SUMS_WORKER_TIMING" >> "$OUTPUT_FILE" 
     echo "$HEADERS_WORKER_TIMING" >> "$OUTPUT_FILE"
     echo "$WORKER_TIMING" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+BAM_HEADERS_SCHEDULER_TIMING=$(grep bam_banking_stage_scheduler_timing "$LOG_FILE" | \
+    awk -F "bam_banking_stage_scheduler_timing" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+BAM_SCHEDULER_TIMING=$(paste -d',' <(
+    grep bam_banking_stage_scheduler_timing "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep bam_banking_stage_scheduler_timing "$LOG_FILE" | \
+    awk -F "bam_banking_stage_scheduler_timing" '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/,$//g'
+))
+BAM_SUMS_SCHEDULER_TIMING=$(echo "$BAM_SCHEDULER_TIMING" | awk -F',' '{for (i=2; i<=NF; i++) sum[i]+=$i} END {printf ","; for (i=2; i<=NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$BAM_HEADERS_SCHEDULER_TIMING" ]; then
+    BAM_HEADERS_SCHEDULER_TIMING=",$BAM_HEADERS_SCHEDULER_TIMING"
+    echo "bam_banking_stage_scheduler_timing" >> "$OUTPUT_FILE"
+    echo "$BAM_SUMS_SCHEDULER_TIMING" >> "$OUTPUT_FILE"
+    echo "$BAM_HEADERS_SCHEDULER_TIMING" >> "$OUTPUT_FILE"
+    echo "$BAM_SCHEDULER_TIMING" >> "$OUTPUT_FILE"
+    echo -e "\n" >> "$OUTPUT_FILE"
+fi
+
+BAM_HEADERS_WORKER_TIMING=$(grep bam_banking_stage_worker_timing "$LOG_FILE" | \
+    awk -F "bam_banking_stage_worker_timing" '{print $2}' | \
+    awk -F"=" '{for (i=1; i<=NF; i++) {gsub(/[0-9]+/, "", $i); printf "%s,", $i} printf "\n"}' | \
+    sed 's/\<i\>//g' | sed 's/  *, */,/g' | sed 's/,$//' | head -n1)
+
+BAM_WORKER_TIMING=$(paste -d',' <(
+    grep bam_banking_stage_worker_timing "$LOG_FILE" | awk '{print $1}' | \
+    awk -F'T' '{split($2, arr, ":"); print arr[2] ":" arr[3]}' | sed 's/Z//g'
+) <(
+    grep bam_banking_stage_worker_timing "$LOG_FILE" | \
+    awk -F "bam_banking_stage_worker_timing" '{print $2}' | \
+    awk -F"=" '{for (i=2; i<=NF; i++) {gsub(/[^0-9]+/, "", $i); printf "%s,", $i} printf "\n"}'| \
+    sed 's/,$//g'
+))
+BAM_SUMS_WORKER_TIMING=$(echo "$BAM_WORKER_TIMING" | awk -F',' '{for (i=3; i<NF; i++) sum[i]+=$i} END {printf ",,"; for (i=3; i<NF; i++) printf "%s,", sum[i]; printf "\n"}' | sed 's/,$//')
+
+if [ -n "$BAM_HEADERS_WORKER_TIMING" ]; then
+    echo "bam_banking_stage_worker_timing" >> "$OUTPUT_FILE"
+    echo "$BAM_SUMS_WORKER_TIMING" >> "$OUTPUT_FILE" 
+    echo "$BAM_HEADERS_WORKER_TIMING" >> "$OUTPUT_FILE"
+    echo "$BAM_WORKER_TIMING" >> "$OUTPUT_FILE"
     echo -e "\n" >> "$OUTPUT_FILE"
 fi
 
