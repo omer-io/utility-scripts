@@ -229,6 +229,8 @@ def download_snapshot(bucket, full_prefix, local_base_dir, snapshot_dir, first_s
         slots = match.group(1).split("-")
         if len(slots) == 1:
             logging.info("Only one slot found — no splitting needed.")
+            # mv snapshot_dir/"all_banking_trace/banking_trace-{first_slot}" to snapshot_dir/"banking_trace"
+            shutil.move(os.path.join(snapshot_dir, "all_banking_trace", f"banking_trace-{first_slot}"), os.path.join(snapshot_dir, "banking_trace"))
             return
 
         logging.info(f"Found multiple slots: {slots}, processing...")
