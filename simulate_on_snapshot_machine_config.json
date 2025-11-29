@@ -1,15 +1,15 @@
 {
   "epoch": 848,
-  "summary_spreadsheet_id": "11ijWEnTR3VcWqb8Kq-V9PiTbmRjF93FvsEY8ym64rjo",
-  "logs_spreadsheet_id": "1D5YHi6K6vSXc2AGfDez2SB3CjRYxoGCtuPRDb3KTz-k",
+  "summary_spreadsheet_id": "1Gd-TURxJyvnyWRwpr_ZQhVuImJ2HmuH1p5n2wl6wsRw",
+  "logs_spreadsheet_id": "1UiAkydbIwuoLohC_jSTPHR4fnr8JL80HbNGe4odg7fo",
   "test_repo_paths": [
     {
       "path": "/home/sol/rakurai_jito_private_mainnet",
-      "test_name": "v3.0.10-rakurai"
+      "test_name": "v3.0.11.b-rakurai"
     },    
     {
       "path": "/home/sol/rakurai_jito_private_standard",
-      "test_name": "v3.0.10-standard"
+      "test_name": "v3.0.11.b-standard"
     }
   ]
 }
